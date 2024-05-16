@@ -4,38 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Instrument Tuner</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-
-        .container {
-            background-color: #ffffff;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        h1 {
-            color: #333333;
-            margin-top: 0;
-        }
-
-        #pitch-display {
-            font-size: 3rem;
-            font-weight: bold;
-            margin-top: 2rem;
-            color: #666666;
-        }
-    </style>
-	<audio src="tick.wav" id="tick"></audio>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <audio src="tick.wav" id="tick"></audio>
 </head>
 <body>
 	
@@ -43,12 +13,13 @@
         <h1>Instrument Tuner</h1>
         <div id="pitch-display">--</div>
     </div>
-	<div class="metronome">
+	<div class="container">
 		<h2>Metronome Tuner</h2>
 		<input type="number" id="bpm-input" placeholder="Enter BPM" min="40" max="240">
 		<button id="play-button">Play</button>
 	</div>
     <script src="tuner.js"></script>
+    <script src="metronome.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
