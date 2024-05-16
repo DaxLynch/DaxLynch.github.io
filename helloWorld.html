@@ -35,13 +35,19 @@
             color: #666666;
         }
     </style>
+	<audio src="tick.wav" id="tick"></audio>
 </head>
 <body>
+	
     <div class="container">
         <h1>Instrument Tuner</h1>
         <div id="pitch-display">--</div>
     </div>
-
+	<div class="metronome">
+		<h2>Metronome Tuner</h2>
+		<input type="number" id="bpm-input" placeholder="Enter BPM" min="40" max="240">
+		<button id="play-button">Play</button>
+	</div>
     <script src="script.js"></script>
 </body>
 </html>
