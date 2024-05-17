@@ -23,17 +23,20 @@ class Tuner {
         
         function pitchClassAndCents(pitch){
                 if (pitch == 0) { return ["0", 0];};
-                let pitchInOctave0 = pitch / Math.pow(2, Math.trunc(Math.log2(pitch))-4)
-                let pitches = [27.5, 29.13523509488056, 30.867706328507698, 32.703195662574764, 34.647828872108946, 36.708095989675876, 38.890872965260044, 41.20344461410867, 43.65352892912541, 46.24930283895422, 48.99942949771858, 51.913087197493056]
+                let pitchInOctave0 = pitch;
+                while (pitchInOctave0 > 55.0){ //This ensures pitch in octave is greater than 27.5
+                    pitchInOctave0 = pitchInOctave0/2;
+                }
+                let pitches = [29.13523509488056, 30.867706328507698, 32.703195662574764, 34.647828872108946, 36.708095989675876, 38.890872965260044, 41.20344461410867, 43.65352892912541, 46.24930283895422, 48.99942949771858, 51.913087197493056, 55.0]
                 let indexOfPitchAbove = pitches.findIndex((x) => {return x > pitchInOctave0}) //This is the pitch above
-                let centsBelowNextNote = 1200 * Math.log2(pitchInOctave0/pitches[indexOfPitchAbove]) 
-                let centsAbovePriorNote = 100 - centsBelowNextNote;
-                let pitchClasses = ["A","A#","B","C","C#","D","D#","E","F#","G","G#"]
+                let centsBelowNextNote = 1200.0 * Math.log2(pitchInOctave0/pitches[indexOfPitchAbove]) 
+                let centsAbovePriorNote = 100.0 + centsBelowNextNote;
+                let pitchClasses = ["A#","B","C","C#","D","D#","E","F","F#","G","G#","A"]
                 if (centsAbovePriorNote <= -1 * centsBelowNextNote ){
                     let noteIndex = indexOfPitchAbove - 1;
                     return [pitchClasses[noteIndex], Math.round(centsAbovePriorNote)];
                 } else {
-                     let noteIndex = indexOfPitchAbove;
+                    let noteIndex = indexOfPitchAbove;
                     return [pitchClasses[noteIndex], Math.round(centsBelowNextNote)];
                 }
         };
