@@ -1,0 +1,5 @@
+I want some form of abstraction for the html and css for the different modules. I would like the html/css for the tuner to be in some separate document or maybe in the js so that we can just edit that, and then we aren't editing the overall page html, and page html can be for module placement, and other ancillary containers and what not.
+
+I want to have the metronome and tuner have some sort of lock, so that only one can be used at a time, and if metronome is going and you try to use tuner then it doesn't work, but maybe this is unneccesary
+
+
