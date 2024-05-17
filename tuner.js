@@ -1,3 +1,6 @@
+//Fixed tuner error, one small one where sometimes it spits undefined for the note, as I think a negative one is given to the pitches array. Please fix
+
+
 class Tuner {
     constructor(audioContext, pitchDisplayId) {
         this.audioContext = audioContext;
@@ -33,7 +36,7 @@ class Tuner {
                 let centsAbovePriorNote = 100.0 + centsBelowNextNote;
                 let pitchClasses = ["A#","B","C","C#","D","D#","E","F","F#","G","G#","A"]
                 if (centsAbovePriorNote <= -1 * centsBelowNextNote ){
-                    let noteIndex = indexOfPitchAbove - 1;
+                    let noteIndex = (indexOfPitchAbove - 1 + 12)% 12;
                     return [pitchClasses[noteIndex], Math.round(centsAbovePriorNote)];
                 } else {
                     let noteIndex = indexOfPitchAbove;
