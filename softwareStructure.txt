@@ -1,0 +1,38 @@
+So the plan for all of the code is to have a main.html, with a corresponding style
+sheet so that the metronome, tuner, and rhythm tracker module can be arranged on
+there. 
+
+Then each module gets constructed, and init'd and renders all relevant information
+in to the respective modules div. Every module requires an audioContext object, 
+but there can only be one per page, so one is instantiated at the script.js scope.
+
+The tuner module creates some webAudio API objects, and creates an analyzer node,
+then the updatePitchDisplay function gets called approx once per framerate by
+requestAnimationUpdate and it updates the div or the animation with the 
+respective pitch class (pitch class == note) info. updatePitch Display gets 
+the pitch class and proximity in cents to the note by the function 
+pitchClassAndCents, which turns a pitch like 440hz into a note like A
+
+The tuner module will have a cute n sexy visualizer function of some sort due to
+Miles.
+
+The metronome class I am still thinking through. The general gist is to use
+setInterval to call scheduler about every 100ms or less. Then scheduler 
+uses the web audio api to accurately schedule the respective beats. It also has an
+off function that turns the metronome on and off using the button.
+
+For a visualizer for this, we could do some sort of animation or just use a video
+and change the playback speed. 
+
+For the meat n potatoers of this project, we were hoping for a thing that records
+4 bars, and shows you where you played notes versus where the metronome played,
+and it would show smaller divisions.
+
+THis will require similar machinery as the metronome, but we also need to record 
+the information into a buffer, which is easy, and then process that for peaks 
+above an amplitude, which I am unsure of how to do but mildly confident its doable.
+ From there we need a visualizer, maybe a sideways scrollable thing.
+
+For software structure there would be a beatAccuracy class, with function onOff to
+start it. We will need a function to proccess the buffer for peaks. We will need a
+function to render a visualizer using a lists of timestamps for each peack. 

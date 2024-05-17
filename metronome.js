@@ -20,7 +20,10 @@ class Metronome {
         this.playing = false;
         this.sourceNode = null;
         this.intervalId = null;
-
+        this.arrayBuffer = null;
+        this.response = null;
+        this.audioBuffer = null;
+ 
         // Get a reference to the play/pause button
         this.playButton = document.getElementById('play-button');
 
@@ -55,14 +58,15 @@ class Metronome {
             while(this.lastNote + this.notePeriod < this.audioContext.currentTime + this.evalPeriod){
                 this.lastNote = this.lastNote + this.notePeriod;
                 this.sourceNode.start(this.lastNote);
+                
             }
         }
     }  
     initialize = async ()  =>{
         this.lastNote = this.audioContext.currentTime;
-        const response = await fetch(this.audio[0]);
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        this.response = await fetch(this.audio[0]);
+        this.arrayBuffer = await response.arrayBuffer();
+        this.audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         this.sourceNode = audioContext.createBufferSource();
         this.sourceNode.buffer = audioBuffer;
         this.sourceNode.connect(audioContext.destination);
