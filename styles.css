@@ -27,3 +27,22 @@ h1 {
     margin-top: 2rem;
     color: #666666;
 }
+
+.bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.beat-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px; /* Adjust as needed */
+}
+
+.beat-container img {
+  width: 50px; /* Adjust as needed */
+  height: 50px; /* Adjust as needed */
+  margin: 0 5px; /* Adjust as needed */
+  cursor: pointer;
+}

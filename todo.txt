@@ -1,5 +1,15 @@
-I want some form of abstraction for the html and css for the different modules. I would like the html/css for the tuner to be in some separate document or maybe in the js so that we can just edit that, and then we aren't editing the overall page html, and page html can be for module placement, and other ancillary containers and what not.
+1. I want some form of abstraction for the html and css for the different modules. I would like the html/css for the tuner to be in some separate document or maybe in the js so that we can just edit that, and then we aren't editing the overall page html, and page html can be for module placement, and other ancillary containers and what not.
 
-I want to have the metronome and tuner have some sort of lock, so that only one can be used at a time, and if metronome is going and you try to use tuner then it doesn't work, but maybe this is unneccesary
+2. I want to have the metronome and tuner have some sort of lock, so that only one can be used at a time, and if metronome is going and you try to use tuner then it doesn't work, but maybe this is unneccesary
+
+3. Easy, make a function that plays a note so its note in the scheduler. This function should take information from the metronome interface like which beats are played and what not, and it will then 
+play which ever beat is supposed to be played next.
+In that same function is how we will handle poly rhytms, it will change what ever the next beat length is,
+so for a 3/4 and 4/4 polyrhytm, the first this.notePeriod will be .25 of a bar, then the next notePeriod will be .3333 - .25 (because thats how much time is inbetween the two notes.) There should be some easy formula for calulating this. I.e at step one calculate 
+
+4. Metronome interface: 
+time signature input
+thing that drops down that allows selection for each note
+3 sounds for each beat, and maybe a volume element for each.
 
 
