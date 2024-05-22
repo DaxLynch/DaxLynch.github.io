@@ -64,26 +64,28 @@ class Metronome {
         }
     }
 
+    async playNote(){
+        this.lastNote = this.lastNote + this.notePeriod;
+        this.sourceNode.start(this.lastNote + this.notePeriod);// This plays the note
+        this.sourceNode = this.audioContext.createBufferSource(); //Every time you play a AudioBufferSourceNode it deletes it
+        this.sourceNode.buffer = this.audioBuffer; //The above line recreates the node object, and this fills its buffer
+        this.sourceNode.connect(this.audioContext.destination); //This connects the output to the speaker
+    }
+
     scheduler(){                                        //Schedules the next notes
-        console.log("Scheduler Called")
+//        console.log("Scheduler Called")
         if (this.playing){
             while(this.lastNote + this.notePeriod < this.audioContext.currentTime + this.evalPeriod){
-                this.lastNote = this.lastNote + this.notePeriod;
-                this.sourceNode.start(this.lastNote + this.notePeriod);// This plays the note
-                this.sourceNode = this.audioContext.createBufferSource(); //Every time you play a AudioBufferSourceNode it deletes it
-                this.sourceNode.buffer = this.audioBuffer; //The above line recreates the node object, and this fills its buffer
-                this.sourceNode.connect(this.audioContext.destination); //This connects the output to the speaker
-            }
+                this.playNote();
+                  }
         }
     }  
+
     async initialize(){                          //Initializes the WebAudio objects and starts the scheduler
 
         // Add the event listener to the play/pause button
         this.playButton.addEventListener('click', this.onOff);
-
-        //initialize the time
-        this.lastNote = this.audioContext.currentTime;
-        
+ 
         //Load the initial audio
         const response = await fetch(this.audio[0]);
         this.arrayBuffer = await response.arrayBuffer();
