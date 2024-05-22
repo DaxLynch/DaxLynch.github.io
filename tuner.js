@@ -5,7 +5,7 @@ class Tuner {
     constructor(audioContext, pitchDisplayId) {
         this.audioContext = audioContext;
         this.pitchDisplay = document.getElementById(pitchDisplayId);
-        this.spinningCircle = document.getElementById("spinning-circle");
+        this.tuningIndicator = document.getElementById("tuning-indicator");
     }
  
  
@@ -58,12 +58,21 @@ class Tuner {
             const maxIndex = dataArray.indexOf(Math.max(...dataArray));
             let pitch = maxIndex * audioContext.sampleRate / analyser.fftSize;
             let [note, cents] = pitchClassAndCents(pitch);
-            this.pitchDisplay.textContent = `${note}`;
+            this.pitchDisplay.textContent = `${note} note, you are ${cents} away`;
+
             
-            let rotationAngle = (pitch % 360); // Adjust as needed
-            
-            //Apply rotation to the spinning circle
-            this.spinningCircle.style.transform = `rotate(${rotationAngle}deg)`;
+
+            let color;
+            if (Math.abs(cents) <= 10) {
+                color = 'green'; // Perfectly in tune
+            } else if (Math.abs(cents) <= 25) {
+                color = 'yellow'; // Slightly out of tune
+            } else {
+                color = 'red'; // Out of tune
+            }
+
+            this.tuningIndicator.style.backgroundColor = color;
+
             
             requestAnimationFrame(updatePitchDisplay);
         }
