@@ -5,6 +5,7 @@ class Tuner {
     constructor(audioContext, pitchDisplayId) {
         this.audioContext = audioContext;
         this.pitchDisplay = document.getElementById(pitchDisplayId);
+        this.spinningCircle = document.getElementById("spinning-circle");
     }
  
  
@@ -27,7 +28,6 @@ class Tuner {
         const dataArray = new Uint8Array(bufferLength);
  
  
-        const circle = document.getElementById("#spinning-circle");
        
        
         function pitchClassAndCents(pitch){
@@ -58,19 +58,12 @@ class Tuner {
             const maxIndex = dataArray.indexOf(Math.max(...dataArray));
             let pitch = maxIndex * audioContext.sampleRate / analyser.fftSize;
             let pCAC = pitchClassAndCents(pitch);
-            this.pitchDisplay.textContent = `${pCAC[1]} cents away from ${pCAC[0]}`;
+            this.pitchDisplay.textContent = `${pitch}`;
             
-            // Check if pitch is present
-            if (pitch !== 0) {
-                // Calculate rotation speed based on pitch
-                let rotationAngle = pitch / 10; // Adjust this factor as needed
-        
-                // Update spinning circle rotation
-                circle.style.transform = `rotate(${rotationAngle}deg)`;
-            } else {
-                // No pitch detected, stop spinning animation
-                circle.style.transform = 'rotate(0deg)';
-            }
+            let rotationAngle = (pitch % 360); // Adjust as needed
+            
+            //Apply rotation to the spinning circle
+            this.spinningCircle.style.transform = `rotate(${rotationAngle}deg)`;
             
             requestAnimationFrame(updatePitchDisplay);
         }
