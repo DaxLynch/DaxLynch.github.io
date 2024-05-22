@@ -44,6 +44,7 @@ class Metronome {
         this.generateBar(); 
         this.intervalId = setInterval(() => this.scheduler(),100)
 
+        
 
     }
     onOff() {                                           //Allows the play button to operate as a toggle
@@ -91,26 +92,35 @@ class Metronome {
         this.sourceNode.buffer = this.audioBuffer;
         this.sourceNode.connect(this.audioContext.destination);
     }
-    
+   
     generateBar() {
         this.barContainer.innerHTML = ''; // Clear the previous bar
+
         const beatsPerBar = parseInt(this.timeSignatureInput.value);
-        console.log(beatsPerBar)
+
+        console.log(beatsPerBar);
+    
         for (let i = 0; i < beatsPerBar; i++) {
             const beatContainer = document.createElement('div');
             beatContainer.classList.add('beat-container');
 
-            for (let j = 0; j < soundIcons.length; j++) {
-                const soundIcon = document.createElement('img');
-                soundIcon.src = soundIcons[j];
-                soundIcon.alt = `Sound ${j + 1}`;
-                soundIcon.dataset.sound = j; // Store the sound index as data
-                soundIcon.addEventListener('click', handleSoundSelection);
-                beatContainer.appendChild(soundIcon);
-            }
-        barContainer.appendChild(beatContainer);
+            const soundFileNames = ['assets/chime.png', 'assets/cymbal.png', 'assets/cowbell.png'];
+            soundFileNames.forEach((iconSrc, index) => {
+                const iconImg = document.createElement('img');
+                iconImg.src = iconSrc;
+                iconImg.alt = `Sound ${index + 1}`;
+                iconImg.dataset.sound = index; // Store the sound index as data
+                iconImg.addEventListener('click', this.handleSoundSelection.bind(this));
+                beatContainer.appendChild(iconImg);
+            })
+
+            this.barContainer.appendChild(beatContainer);
         }
     }
+
+
+
+
     handleSoundSelection(event) {
         const selectedSound = parseInt(event.target.dataset.sound);
         const beatIndex = Array.from(event.target.parentNode.parentNode.children).indexOf(event.target.parentNode);
