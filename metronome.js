@@ -74,6 +74,8 @@ Similarly it must select which sounds is played based on those sound functions d
 below. SO when someone selects a chime icon for a specific beat, then when 
 playnote plays the note jst prior to that beat, it must preload the sound for the next
 one. 
+
+functionality for playing polyrhytms should be like if this.note % rhythm1 then play corresponding beat, if this.note % rhtyhm 2 then play rehythm2 and if both then restart both.
 */
         this.lastNote = this.lastNote + this.notePeriod;
         this.sourceNode.start(this.lastNote + this.notePeriod);// This plays the note
