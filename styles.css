@@ -21,6 +21,13 @@ h1 {
     margin-top: 0;
 }
 
+#rhythm-display {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-top: 2rem;
+    color: #666666;
+}
+
 #pitch-display {
     font-size: 1rem;
     font-weight: bold;
