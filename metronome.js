@@ -12,6 +12,7 @@ you stop the metronome it might at most place for .1 seconds.
 
 class Metronome {
     constructor(audioContext) {
+        
         this.audioContext = audioContext;
         this.audio = ["tick.wav"];                      //Names of audio files for metronome
         this.lastNote = this.audioContext.currentTime;  //Time the last note was played
@@ -26,15 +27,24 @@ class Metronome {
         this.intervalId = null;                         //setInterval is assigned to this, so that 
                                                         //scheduler can be started and stopped        
         this.onOff = this.onOff.bind(this);             //Bind the onOff function to the class instance
-        
-        this.timeSignatureContainer = null;
-        this.barContainer = null;
-        this.metronomeContainer = null;
+
+        this.timeSignatureContainer = document.getElementById('time-signature-container');
+        this.barContainer = document.getElementById('bar-container');
+        this.timeSignatureInput = document.getElementById('time-signature-input');
         this.playButton = document.getElementById('play-button');
+ 
+        // Set the initial time signature value, and set the listener
+        this.timeSignature = this.timeSignatureInput.value;
+        this.timeSignatureInput.addEventListener('input', (event) => {
+            this.timeSignature = event.target.value;
+            this.generateBar();
+        }); 
+
+        //generate the bar of icons
+        this.generateBar(); 
+        this.intervalId = setInterval(() => this.scheduler(),100)
 
 
-        // Add the event listener to the play/pause button
-        this.playButton.addEventListener('click', this.onOff);
     }
     onOff() {                                           //Allows the play button to operate as a toggle
         const currentValue = this.playButton.value;
@@ -67,12 +77,9 @@ class Metronome {
     }  
     async initialize(){                          //Initializes the WebAudio objects and starts the scheduler
 
-        //Initiate the html
-        this.loadMetronomeInterface();
-        this.timeSignatureContainer = document.querySelector('.time-signature-container');
-        this.barContainer = document.querySelector('.bar-container');
-        this.metronomeContainer = document.getElementById('metronome-interface-container');
-        this.timeSignatureInput = document.getElementById('time-signature-input');
+        // Add the event listener to the play/pause button
+        this.playButton.addEventListener('click', this.onOff);
+
         //initialize the time
         this.lastNote = this.audioContext.currentTime;
         
@@ -83,36 +90,12 @@ class Metronome {
         this.sourceNode = this.audioContext.createBufferSource();
         this.sourceNode.buffer = this.audioBuffer;
         this.sourceNode.connect(this.audioContext.destination);
-        
-        // Set the initial time signature value, and set the listener
-        let timeSignature = timeSignatureInput.value;
-        timeSignatureInput.addEventListener('input', (event) => {
-            timeSignature = event.target.value;
-            this.generateBar();
-        }); 
-
-        //generate the bar of icons
-        this.generateBar(); 
-        this.intervalId = setInterval(() => this.scheduler(),100)
     }
     
-    loadMetronomeInterface() {
-        fetch('metronome.html')
-            .then(response => response.text())
-            .then(html => {
-                this.metronomeContainer.innerHTML = html;
-                // Initialize the metronome interface after loading the HTML
-               //initializeMetronomeInterface();
-        })
-        .catch(error => {
-            console.error('Error loading metronome interface:', error);
-        });
-    }
     generateBar() {
         this.barContainer.innerHTML = ''; // Clear the previous bar
-
-        const beatsPerBar = parseInt(timeSignature.split('/')[0]);
-
+        const beatsPerBar = parseInt(this.timeSignatureInput.value);
+        console.log(beatsPerBar)
         for (let i = 0; i < beatsPerBar; i++) {
             const beatContainer = document.createElement('div');
             beatContainer.classList.add('beat-container');

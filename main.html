@@ -6,6 +6,9 @@
     <title>Instrument Tuner</title>
     <link rel="stylesheet" type="text/css" href="styles.css">
     <audio src="tick.wav" id="tick"></audio>
+    <link rel="preload" as="image" href="tick.png">
+    <link rel="preload" as="image" href="clap.png">
+    <link rel="preload" as="image" href="hihat.png"> 
 </head>
 <body>
 	
@@ -15,8 +18,27 @@
     </div>
 	<div class="container">
 		<h2>Metronome Tuner</h2>
-        <div id="metronome-interface-container"></div>
-		<button id="play-button">Play</button>
+        <div class="metronome-representation">
+        </div>
+        <div id="metronome-interface">
+            <div id="time-signature-container">
+                <label for="time-signature-input">Time Signature:</label>
+                <input type="number" id="time-signature-input" min="1" value="4">
+            </div>
+             
+            <div id="bar-container">
+            </div>
+            
+            <div id="bpm-container">
+            </div>
+              
+            <div id="sound-selector-container">
+            </div>
+            
+            <button id="play-button">Play</button>
+            </div>
+
+        </div>
 	</div>
     <script src="tuner.js"></script>
     <script src="metronome.js"></script>
