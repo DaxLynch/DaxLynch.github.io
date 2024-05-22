@@ -57,8 +57,8 @@ class Tuner {
             analyser.getByteFrequencyData(dataArray);
             const maxIndex = dataArray.indexOf(Math.max(...dataArray));
             let pitch = maxIndex * audioContext.sampleRate / analyser.fftSize;
-            let pCAC = pitchClassAndCents(pitch);
-            this.pitchDisplay.textContent = `${pitch}`;
+            let [note, cents] = pitchClassAndCents(pitch);
+            this.pitchDisplay.textContent = `${note}`;
             
             let rotationAngle = (pitch % 360); // Adjust as needed
             
