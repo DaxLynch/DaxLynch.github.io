@@ -1,47 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instrument Tuner</title>
-    <link rel="stylesheet" type="text/css" href="styles.css">
-    <audio src="tick.wav" id="tick"></audio>
-    <link rel="preload" as="image" href="assets/chime.png">
-    <link rel="preload" as="image" href="assets/cowbel.png">
-    <link rel="preload" as="image" href="assests/cymbal.png"> 
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Instrument Tuner</title>
+   <link rel="stylesheet" type="text/css" href="styles.css">
+   <audio src="tick.wav" id="tick"></audio>
+   <link rel="preload" as="image" href="assets/chime.png">
+   <link rel="preload" as="image" href="assets/cowbel.png">
+   <link rel="preload" as="image" href="assests/cymbal.png">
 </head>
 <body>
-	
-    <div class="container">
-        <h1>Instrument Tuner</h1>
-        <div id="pitch-display">--</div>
-    </div>
-	<div class="container">
-		<h2>Metronome Tuner</h2>
-        <div class="metronome-representation">
-        </div>
-        <div id="metronome-interface">
-            <div id="time-signature-container">
-                <label for="time-signature-input">Time Signature:</label>
-                <input type="number" id="time-signature-input" min="1" value="4">
-            </div>
-             
-            <div id="bar-container">
-            </div>
-            
-            <div id="bpm-container">
-            </div>
-              
-            <div id="sound-selector-container">
-            </div>
-            
-            <button id="play-button">Play</button>
-            </div>
+  
+   <div class="container">
+       <h1>Instrument Tuner</h1>
+       <div id="pitch-display">--</div>
+       <div id="spinning-circle"></div>
+   </div>
 
-        </div>
-	</div>
-    <script src="tuner.js"></script>
-    <script src="metronome.js"></script>
-    <script src="script.js"></script>
+
+
+   <div class="container">
+       <h2>Metronome Tuner</h2>
+       <div class="metronome-representation">
+       </div>
+       <div id="metronome-interface">
+           <div id="time-signature-container">
+               <label for="time-signature-input">Time Signature:</label>
+               <input type="number" id="time-signature-input" min="1" value="4">
+           </div>
+           
+           <div id="bar-container">
+           </div>
+          
+           <div id="bpm-container">
+           </div>
+            
+           <div id="sound-selector-container">
+           </div>
+          
+           <button id="play-button">Play</button>
+           </div>
+
+
+       </div>
+   </div>
+   <script src="tuner.js"></script>
+   <script src="metronome.js"></script>
+   <script src="script.js"></script>
 </body>
 </html>
