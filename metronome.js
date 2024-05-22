@@ -47,6 +47,7 @@ class Metronome {
         
 
     }
+
     onOff() {                                           //Allows the play button to operate as a toggle
         const currentValue = this.playButton.value;
         if (currentValue === "On") {
@@ -107,7 +108,8 @@ functionality for playing polyrhytms should be like if this.note % rhythm1 then 
         this.sourceNode.connect(this.audioContext.destination);
     }
    
-    generateBar() {
+    generateBar() { //Repeat the code twice horizontally for the second metronome and interface, have  a check for is polyrhythm has been clicked, also make a polyrhtym function
+//
 
         const beatsPerBar = parseInt(this.timeSignatureInput.value);
         
