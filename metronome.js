@@ -64,7 +64,17 @@ class Metronome {
         }
     }
 
-    async playNote(){
+    async playNote(){ 
+/* This function should handle all polyrhythm and note playing functionality.
+There needs to be a class varaiable, this.note or something that represents which
+note it is on for a beat. Then every time this function si called it needs to 
+schedule the next note, which is either beat of the poly rhythm.
+
+Similarly it must select which sounds is played based on those sound functions down
+below. SO when someone selects a chime icon for a specific beat, then when 
+playnote plays the note jst prior to that beat, it must preload the sound for the next
+one. 
+*/
         this.lastNote = this.lastNote + this.notePeriod;
         this.sourceNode.start(this.lastNote + this.notePeriod);// This plays the note
         this.sourceNode = this.audioContext.createBufferSource(); //Every time you play a AudioBufferSourceNode it deletes it
