@@ -94,12 +94,11 @@ class Metronome {
     }
    
     generateBar() {
-        this.barContainer.innerHTML = ''; // Clear the previous bar
 
         const beatsPerBar = parseInt(this.timeSignatureInput.value);
-
-        console.log(beatsPerBar);
-    
+        
+        if (!isNaN(beatsPerBar)){
+        this.barContainer.innerHTML = ''; // Clear the previous bar
         for (let i = 0; i < beatsPerBar; i++) {
             const beatContainer = document.createElement('div');
             beatContainer.classList.add('beat-container');
@@ -115,6 +114,7 @@ class Metronome {
             })
 
             this.barContainer.appendChild(beatContainer);
+        }
         }
     }
 
