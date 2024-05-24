@@ -86,7 +86,7 @@ functionality for playing polyrhytms should be like if this.note % rhythm1 then 
     }
 
     scheduler(){                                        //Schedules the next notes
-        console.log("Scheduler Called")
+        //console.log("Scheduler Called")
         if (this.playing){
             while(this.lastNote + this.notePeriod < this.audioContext.currentTime + this.evalPeriod){
                 this.playNote();
