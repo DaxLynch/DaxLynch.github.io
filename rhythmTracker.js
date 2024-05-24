@@ -18,7 +18,7 @@ class RhythmTracker {
         this.analyser.fftSize = 2048*4;
         this.analyser.smoothingTimeConstant = 0;
        
-        this.sensitivity = 200         //Arbitrary number, should be adjustable by user.
+        this.sensitivity = 0         //Arbitrary number, should be adjustable by user.
         this.temporalSensitivity = 1/4 //I.e, the algo wont detect a beat 1/4 of a BPM after the last, this is so a single peak isn't detected multiple times
         this.lastAmplitude = 0 
         
@@ -34,14 +34,17 @@ class RhythmTracker {
        
         this.bars = 4; 
         this.beats = 4
-
+    
+        this.record = this.record.bind(this);             //Bind the record function to the class instance
 
         this.recording = false
         const button = document.getElementById("rhythm-button")
         button.addEventListener("click", () => {
-            this.recording = true
+            this.recordedBeatArrays = []
+            this.metronomeBeatArrays = []
             this.startTime = this.audioContext.currentTime;
             this.schedule();
+            this.recording = true
         })
 
         this.sourceNode = null;                         //These are for the audioBuffers
@@ -65,7 +68,6 @@ class RhythmTracker {
         this.canvasCtx = this.canvas.getContext("2d");
         this.draw() 
         }) 
-        // setInterval(this.draw,50)
 
         //Load the initial audio
         const response = await fetch("tick.wav");
@@ -74,46 +76,53 @@ class RhythmTracker {
         this.sourceNode = this.audioContext.createBufferSource();
         this.sourceNode.buffer = this.audioBuffer;
         this.sourceNode.connect(this.audioContext.destination);
-
+        requestAnimationFrame(this.record);
     }
     
-    async schedule(){ //Do we want to allow changes in time signature???
-        for (let i = 0; i < (bars+1)*beats; i++){ //This counts you in an extra bar
+    schedule(){ //Do we want to allow changes in time signature???
+
+        for (let i = 0; i < (this.bars+1)*this.beats; i++){ //This counts you in an extra bar
         //Make sure to set startTime = currentTIme when you atart this fuction
 
+            if (i > this.beats - 1) {
+                this.metronomeBeatArrays.push(this.startTime + i * this.notePeriod)
+            }
             this.sourceNode.start(this.startTime + i * this.notePeriod)
             this.sourceNode = this.audioContext.createBufferSource();
             this.sourceNode.buffer = this.audioBuffer;
             this.sourceNode.connect(this.audioContext.destination); 
         }
+        this.stopTime = this.metronomeBeatArrays[this.beats*this.bars -1] + this.notePeriod; //Stop recording 1 beat after the final metronome click
     }
 
     record(){
+        requestAnimationFrame(this.record);
+        if (this.recording && this.audioContext.currentTime < this.stopTime){
 
-        this.analyser.getByteFrequencyData(this.dataArray);
-         
-        let limit = this.bufferLength
-        if (this.bufferLength >  1024) {
-            limit = limit / (analyser.fftSize/2048)
+            this.analyser.getByteFrequencyData(this.dataArray);     
+            let limit = this.bufferLength
+            if (this.bufferLength >  1024) {
+                limit = limit / (this.analyser.fftSize/2048)
+            }
+            
+            let power = 0  //This is a quantity proportional to the power in the spectrum
+            for (let i = 0; i < limit; i++) {
+                power += this.dataArray[i]
+            }
+            if (power > this.sensitivity && (this.audioContext.currentTime > this.lastBeatTime + this.beatSpacing)){
+                console.log("Beat Detected")
+                console.log(power)
+                this.recordedBeatArrays.push(this.audioContext.currentTime)
+                this.lastBeatTime = this.audioContext.currentTime;
+            }
         }
-        
-        let power = 0  //This is a quantity proportional to the power in the spectrum
-        for (let i = 0; i < limit; i++) {
-            power += dataArray[i]
+        if (this.recording == true && this.audioContext.currentTime > this.stopTime){
+            this.recording = false;
         }
-        if (power > this.sensitivity && (this.audioContext.currentTime > this.lastBeatTime + this.beatSpacing)){
-            console.log("Beat Detected")
-            console.log(power)
-            this.lastBeatTime = this.audioContext.currentTime;
-            this
-        }
- 
-
-
-
     }
 
     draw() {
+        const dataArray = this.dataArray
         this.canvasCtx.fillStyle = "rgb(200 200 200)";
         this.canvasCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -126,7 +135,7 @@ class RhythmTracker {
         let amplitude = 0
         let limit = this.bufferLength
         if (this.bufferLength >  1024) {
-            limit = limit / (analyser.fftSize/2048)
+            limit = limit / (this.analyser.fftSize/2048)
         }
         const sliceWidth = (this.canvas.width * 1.0) / limit;
         for (let i = 0; i < limit; i++) {
@@ -143,7 +152,7 @@ class RhythmTracker {
             amplitude += dataArray[i]
         }
         if (amplitude > this.sensitivity && this.audioContext.currentTime > this.lastBeatTime + this.beatSpacing){
-            console.log("Peak")
+            console.log("Beat Detected")
             console.log(amplitude)
             this.lastAmplitude = amplitude
             this.lastBeatTime = this.audioContext.currentTime;
