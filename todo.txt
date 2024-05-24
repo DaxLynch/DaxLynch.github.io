@@ -3,6 +3,11 @@ Main site stuff:
 so that only one can be used at a time, and if metronome is going 
 and you try to use tuner then it doesn't work, but maybe this is unneccesary
 2. Maybe some css?
+3. In some of the init functions I define functions inside and its wack I dont like it can someone put all the functions in the class scope,
+4. Make all variables, classes, and functions follow the same naming scheme
+5. Put doc strings on everyfunction and class,
+6. Put headers on each file
+
 
 1. Tuner:
 Visualizer
@@ -26,6 +31,8 @@ sweeping across the screen.
 Note the function must check if this.playing, and lol we could make it so there are two overlaid for the polyrhythms
 
 rhythmTracker:
-1. record time some sort of time data, figureout how to do this?
-2. See if I can even get good data from the metronome from my guitar
-3. done!
+2. button for bpm entry
+3. scroolbar or some way to manage showing all the data at once, claude pls help
+4. record time data, ez
+5. schedule clicks in advance, ez
+
