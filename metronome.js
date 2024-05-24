@@ -17,7 +17,7 @@ class Metronome {
         this.audio = ["tick.wav"];                      //Names of audio files for metronome
         this.lastNote = this.audioContext.currentTime;  //Time the last note was played
         this.evalPeriod = .100;                         //Time the scheduler gets called in seconds
-        this.notePeriod = .3;                        //Current period of the metronome in seconds
+        this.notePeriod = .3;                          //Current period of the metronome in seconds
         this.playing = false;                           //Boolean if the metronome is playing
         this.sourceNode = null;                         //These three are for the audioBuffer, maybe not needed
         this.arrayBuffer = null;     
@@ -65,7 +65,7 @@ class Metronome {
         }
     }
 
-    async playNote(){ 
+    playNote(){ 
 /* This function should handle all polyrhythm and note playing functionality.
 There needs to be a class varaiable, this.note or something that represents which
 note it is on for a beat. Then every time this function si called it needs to 
@@ -109,18 +109,17 @@ functionality for playing polyrhytms should be like if this.note % rhythm1 then 
     }
    
     generateBar() { //Repeat the code twice horizontally for the second metronome and interface, have  a check for is polyrhythm has been clicked, also make a polyrhtym function
-//
-
+    //Creates the selection menu for the beats
         const beatsPerBar = parseInt(this.timeSignatureInput.value);
         
-        if (!isNaN(beatsPerBar)){
-        this.barContainer.innerHTML = ''; // Clear the previous bar
-        for (let i = 0; i < beatsPerBar; i++) {
+        if (!isNaN(beatsPerBar)){                                           //If the value is a number
+        this.barContainer.innerHTML = '';                                   //Clear the previous bar
+        for (let i = 0; i < beatsPerBar; i++) {                             //For each beat
             const beatContainer = document.createElement('div');
-            beatContainer.classList.add('beat-container');
+            beatContainer.classList.add('beat-container');                  //Create a container
 
             const soundFileNames = ['assets/chime.png', 'assets/cymbal.png', 'assets/cowbell.png'];
-            soundFileNames.forEach((iconSrc, index) => {
+            soundFileNames.forEach((iconSrc, index) => {                    //And fill the container with the correct icons
                 const iconImg = document.createElement('img');
                 iconImg.src = iconSrc;
                 iconImg.alt = `Sound ${index + 1}`;
@@ -129,7 +128,7 @@ functionality for playing polyrhytms should be like if this.note % rhythm1 then 
                 beatContainer.appendChild(iconImg);
             })
 
-            this.barContainer.appendChild(beatContainer);
+            this.barContainer.appendChild(beatContainer);                  //Add the beatContainer to the barContainer
         }
         }
     }
@@ -137,15 +136,14 @@ functionality for playing polyrhytms should be like if this.note % rhythm1 then 
 
 
 
-    handleSoundSelection(event) {
-        const selectedSound = parseInt(event.target.dataset.sound);
+    handleSoundSelection(event) {                                         //Change which sound is played for which beat
+        const selectedSound = parseInt(event.target.dataset.sound); 
         const beatIndex = Array.from(event.target.parentNode.parentNode.children).indexOf(event.target.parentNode);
         // Update the metronome with the selected sound and beat index
-        updateMetronomeSound(selectedSound, beatIndex);
+        this.updateMetronomeSound(selectedSound, beatIndex);
     }
     updateMetronomeSound(selectedSound, beatIndex) {
-        // Implement your metronome update logic here
-    console.log(`Selected sound ${selectedSound} for beat ${beatIndex}`);
+        console.log(`Selected sound ${selectedSound} for beat ${beatIndex}`);
     }
        
 }
