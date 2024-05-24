@@ -29,3 +29,11 @@ rhythmTracker:
 1. record time some sort of time data, figureout how to do this?
 2. See if I can even get good data from the metronome from my guitar
 3. done!
+
+Harry todo:
+
+pitch up first tick
+polyrthythm button/functionality
+be able to set bpm
+
+style html and css to look good.

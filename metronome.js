@@ -23,6 +23,7 @@ class Metronome {
         this.arrayBuffer = null;     
         this.response = null;
         this.audioBuffer = null;
+        this.polyrhythmActive = false;
  
         this.intervalId = null;                         //setInterval is assigned to this, so that 
                                                         //scheduler can be started and stopped        
