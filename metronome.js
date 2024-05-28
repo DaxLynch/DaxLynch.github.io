@@ -65,8 +65,8 @@ class Metronome {
             this.playButton.value = "On";
             console.log("Turned on");
             this.playing = true;
-            this.lastNote = this.audioContext.currentTime;
-            this.lastNoteP = this.lastNote; //remove this or alter it for polyrhythms n shit
+            this.lastNote = this.audioContext.currentTime - this.notePeriod + .001;
+            this.lastNoteP = this.lastNote + this.notePeriod - this.notePeriodP; //remove this or alter it for polyrhythms n shit
             this.polyrhythmActive = true
             this.currentBeat = 0; // Reset the current beat when the metronome starts.
             this.currentBeatP = 0; // Reset the current beat when the metronome starts.
@@ -124,7 +124,7 @@ class Metronome {
         } else {                       //The polyrhythm note is to be played next
              if (beatIndexP == 0){ 
             console.log("second track  first beat")
-                sourceNode.buffer = this.audioBuffer[this.audiosPerBeatP[beatIndexP] + this.audioFiles.length/2]; 
+                sourceNode.buffer = this.audioBuffer[1]//this.audiosPerBeatP[beatIndexP]  + this.audioFiles.length/2]; 
             }
             else { 
             console.log("second track not first beat")
