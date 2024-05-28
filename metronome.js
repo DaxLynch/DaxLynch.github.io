@@ -69,10 +69,10 @@ class Metronome {
         const bufferIndex = beatIndex === 0 ? 1 : 0; // Use the high-pitched sound for the first beat
     
         const sourceNode = this.audioContext.createBufferSource();
-        if (beatIndex == 0){
-            sourceNode.buffer = this.audioBuffer[bufferIndex + this.audioFiles.length]; //The audioFiles should have each audio.wav in a list, and then each audio_high.wav
+        if (beatIndex == 0){ //We are on the first note of a bar, so play the uppitched version
+            sourceNode.buffer = this.audioBuffer[this.audiosPerBeat[beatIndex] + 2]; //The audioFiles should have each audio.wav in a list, and then each audio_high.wav
         }
-        else {
+        else { //We are NOT on the first beat of the bar
             sourceNode.buffer = this.audioBuffer[this.audiosPerBeat[beatIndex]];
         }
         sourceNode.connect(this.audioContext.destination);
@@ -89,14 +89,15 @@ class Metronome {
         if (beatIndex == 0 && beatIndexP == 0){
             //Play the first sound, increment both times,
 
+            sourceNode.buffer = this.audioBuffer[0 + this.audioFiles.length/2]; //The audioFiles should have each audio.wav in a list, and then each audio_high.wav
             this.lastNote += this.notePeriod; //Only do this if this is the note we incremented
             this.lastNoteP += this.notePeriodP; //Above
             this.currentBeat++;
             this.currentBeatP++;
-
         }
         if (this.lastNote + this.notePeriod < this.lastNoteP + this.notePeriodP){
             //Play the from the standard set
+            sourceNode.buffer = this.audioBuffer[this.audiosPerBeat[beatIndex] ]; //The audioFiles should have each audio.wav in a list, and then each audio_high.wav
         } else {
             //play from the standard set and increment both
         }
@@ -135,7 +136,7 @@ class Metronome {
         this.playButton.addEventListener('click', this.onOff);
 
         // Load the audio files
-        for (let i = 0; i < 2; i++) { // initializes the audio files from array
+        for (let i = 0; i < 3; i++) { // initializes the audio files from array
             const response = await fetch(this.audioFiles[i]);
             const arrayBuffer = await response.arrayBuffer();
             const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
