@@ -81,7 +81,7 @@ class RhythmTracker {
     
     schedule(){
         for (let i = 0; i < (this.bars+1)*this.beats; i++){  //This counts you in an extra bar
-            if (i > (this.beats - 1)) {                      //
+            if (i > (this.beats - 1)) {                      //THis ensures you don't record the count in beats
                 this.metronomeBeatArray.push(this.startTime + i * this.notePeriod)
             }
             //Schedule the sound and refresh the bufferSourceNode
@@ -97,6 +97,7 @@ class RhythmTracker {
     record(){
         requestAnimationFrame(this.record);                  //This is running once per frame
         if (this.recording && (this.audioContext.currentTime < this.stopTime) && (this.audioContext.currentTime > this.metronomeBeatArray[0])){
+
             //The above if statement means we should only record once recording is true,
             //and after the count in and up to 1 beat after the final metronome click
             this.analyser.getByteFrequencyData(this.dataArray);     
@@ -133,7 +134,7 @@ class RhythmTracker {
         this.canvasCtx.lineWidth = 2;
         this.canvasCtx.strokeStyle = "rgb(0 0 0)";
         
-        const startTime = this.metronomeBeatArray[0] - this.notePeriod; //This is 1 beat before the first metronome beat
+        const startTime = this.metronomeBeatArray[0] - (2 * this.notePeriod); //This is 1 beat before the first metronome beat
         const stopTime = this.stopTime;                                 //This is 1 beat after the final metronome click 
         const ctx = this.canvasCtx
         const canvas = this.canvas
@@ -141,13 +142,20 @@ class RhythmTracker {
         const timeScale = canvasWidth / (stopTime - startTime); 
 
         ctx.strokeStyle = 'black';
-        this.metronomeBeatArray.forEach(beat => {
-            const x = (beat - startTime) * timeScale;
+        for (let i = 0; i < this.beats*this.bars; i++){
+            let beat = this.metronomeBeatArray[i];
+            if ((i % this.beats) == 0){
+                this.canvasCtx.lineWidth = 4;
+            }
+            const x = (beat - startTime ) * timeScale;
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, canvas.height);
             ctx.stroke();
-        }); 
+            if ((i % this.beats) == 0){
+                this.canvasCtx.lineWidth = 2;
+            }
+        }
        
         ctx.strokeStyle = 'red';
         this.recordedBeatArray.forEach(beat => {
