@@ -5,7 +5,8 @@ class Tuner {
     constructor(audioContext, pitchDisplayId) {
         this.audioContext = audioContext;
         this.pitchDisplay = document.getElementById(pitchDisplayId);
-        this.tuningIndicator = document.getElementById("tuning-indicator");
+        this.centsDisplay = document.getElementById("cents-display");
+        this.pendulum = document.getElementById("pendulum");
     }
  
  
@@ -56,27 +57,23 @@ class Tuner {
         const updatePitchDisplay = () => {
             analyser.getByteFrequencyData(dataArray);
             const maxIndex = dataArray.indexOf(Math.max(...dataArray));
-            let pitch = maxIndex * audioContext.sampleRate / analyser.fftSize;
-            let [note, cents] = pitchClassAndCents(pitch);
-            this.pitchDisplay.textContent = `${note} note, you are ${cents} away`;
+            const pitch = maxIndex * this.audioContext.sampleRate / analyser.fftSize;
+            const [note, cents] = pitchClassAndCents(pitch);
+            this.pitchDisplay.textContent = `${note}`;
+            this.centsDisplay.textContent = `${cents}`;
 
-            
+            const maxAngle = 45; // Increased swing range
+            const angle = ((cents / 50) * maxAngle)+180;
+            this.pendulum.style.transform = `rotate(${angle}deg)`;
 
-            let color;
-            if (Math.abs(cents) <= 10) {
-                color = 'green'; // Perfectly in tune
-            } else if (Math.abs(cents) <= 25) {
-                color = 'yellow'; // Slightly out of tune
-            } else {
-                color = 'red'; // Out of tune
-            }
+            const redIntensity = Math.min(255, Math.abs(cents) * 5);
+            const greenIntensity = Math.max(0, 255 - Math.abs(cents) * 5);
+            const color = `rgb(${redIntensity}, ${greenIntensity}, 0)`;
+            this.pendulum.style.backgroundColor = color;
+            this.pendulum.style.setProperty('--pendulum-color', color);
 
-            this.tuningIndicator.style.backgroundColor = color;
-
-            
             requestAnimationFrame(updatePitchDisplay);
-        }
- 
+        };
  
         // Start the pitch detection loop
         updatePitchDisplay();
