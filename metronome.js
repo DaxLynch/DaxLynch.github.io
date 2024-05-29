@@ -1,7 +1,7 @@
 class Metronome {
     constructor(audioContext) {
         this.audioContext = audioContext;
-        this.audioFiles = ["assets/tick.wav", "assets/chime.wav", "assets/tick_high.wav", "assets/chime_high.wav"]; // Add the high-pitched sound for the first beat
+        this.audioFiles = ["assets/tick.wav", "assets/chime.wav", "assets/cymbal.wav","assets/tick_high.wav", "assets/chime_high.wav", "assets/cymbal_high.wav"]; // Add the high-pitched sound for the first beat
 
         this.lastNote = this.audioContext.currentTime; // Time the last note was played
         this.lastNoteP = this.audioContext.currentTime; // Time the last note was played, polyrhythm
@@ -159,7 +159,7 @@ class Metronome {
         this.playButton.addEventListener('click', this.onOff);
 
         // Load the audio files
-        for (let i = 0; i < 3; i++) { // initializes the audio files from array
+        for (let i = 0; i < this.audioFiles.length; i++) { // initializes the audio files from array
             const response = await fetch(this.audioFiles[i]);
             const arrayBuffer = await response.arrayBuffer();
             const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
