@@ -8,7 +8,6 @@ body {
   margin: 0;
 }
 
-
 .container {
   background-color: #ffffff;
   padding: 2rem;
@@ -17,12 +16,10 @@ body {
   text-align: center;
 }
 
-
 h1 {
   color: #333333;
   margin-top: 0;
 }
-
 
 #pitch-display {
   font-size: 3rem;
@@ -31,33 +28,29 @@ h1 {
   color: #666666;
 }
 
-
 .bar-container {
-display: flex;
-flex-direction: column;
-align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-
 
 .beat-container {
-display: flex;
-justify-content: center;
-margin-bottom: 10px; /* Adjust as needed */
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px; /* Adjust as needed */
 }
-
 
 .beat-container img {
-width: 50px; /* Adjust as needed */
-height: 50px; /* Adjust as needed */
-margin: 0 5px; /* Adjust as needed */
-cursor: pointer;
+  width: 50px; /* Adjust as needed */
+  height: 50px; /* Adjust as needed */
+  margin: 0 5px; /* Adjust as needed */
+  cursor: pointer;
 }
-
 
 .pendulum-container {
   position: relative;
   width: 100px;
-  height: 300px;
+  height: 250px;
   margin: 20px auto;
 }
 
@@ -67,9 +60,9 @@ cursor: pointer;
   left: 50%;
   width: 7px;
   height: 100px;
-  background-color: red;
+  background-color: black;
   transform-origin: top;
-  transform: rotate(180deg);
+  transform: rotate(180deg); /* Start in neutral position */
   transition: transform 0.1s ease-out, background-color 0.3s ease-out;
 }
 
