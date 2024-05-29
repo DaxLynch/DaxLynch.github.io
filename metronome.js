@@ -96,38 +96,32 @@ class Metronome {
         //Figure out which beat get played next,
         console.log(beatIndex)
         console.log(beatIndexP)
-        if ((beatIndex == 0) && (beatIndexP == 0)){
-            console.log("int his bitch")
+        if ((beatIndex == 0) && (beatIndexP == 0)){ //If both beats are at 0, play only the first track
             //Play the first sound, increment both sets,
-
-            sourceNode.buffer = this.audioBuffer[0 + this.audioFiles.length/2];
+            sourceNode.buffer = this.audioBuffer[0 + this.audioFiles.length/2];  //FIXME once new sounds are added
             sourceNode.connect(this.audioContext.destination);
             sourceNode.start(this.lastNote + this.notePeriod);
 
             this.currentBeatP++;
             this.currentBeat++;
-            this.lastNote += this.notePeriod; //Only do this if this is the note we incremented
-            this.lastNoteP += this.notePeriodP; //Above //If Must set lastNoteP == 0
+            this.lastNote += this.notePeriod;
+            this.lastNoteP += this.notePeriodP; 
         } else {if (this.lastNote + this.notePeriod < this.lastNoteP + this.notePeriodP){ //Playing the normal track
-             if (beatIndex == 0){ 
-            console.log("first track first beat")
+             if (beatIndex == 0){ //First Track First Beat
                 sourceNode.buffer = this.audioBuffer[this.audiosPerBeat[beatIndex] + this.audioFiles.length/2]; 
             }
-            else { //We are NOT on the first beat of the bar
-            console.log("first track not first beat")
+            else { //First track not first beat
                 sourceNode.buffer = this.audioBuffer[this.audiosPerBeat[beatIndex]];
             }
             this.currentBeat++;
             sourceNode.connect(this.audioContext.destination);
             sourceNode.start(this.lastNote + this.notePeriod);
             this.lastNote += this.notePeriod; 
-        } else {                       //The polyrhythm note is to be played next
-             if (beatIndexP == 0){ 
-            console.log("second track  first beat")
-                sourceNode.buffer = this.audioBuffer[1]//this.audiosPerBeatP[beatIndexP]  + this.audioFiles.length/2]; 
+        } else {   //The polyrhythm note is to be played next
+             if (beatIndexP == 0){ //Second Track First Beat
+                sourceNode.buffer = this.audioBuffer[1]//this.audiosPerBeatP[beatIndexP]  + this.audioFiles.length/2];   onnce new audios are in FIXME
             }
-            else { 
-            console.log("second track not first beat")
+            else { //Second Track Not First Beat")
                 sourceNode.buffer = this.audioBuffer[this.audiosPerBeatP[beatIndexP]];
             }
             this.currentBeatP++;

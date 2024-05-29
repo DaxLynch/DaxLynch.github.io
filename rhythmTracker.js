@@ -6,7 +6,7 @@ class RhythmTracker {
         this.draw = this.draw.bind(this);                       //Bind the onOff function to the class instance
         this.canvas = document.getElementById("rhythm-display");
         this.canvasCtx = this.canvas.getContext("2d");
-        this.canvas.width = window.innerWidth;
+        this.canvas.width = .75 * window.innerWidth;
     
 		// Set up the analyser
         this.audioContext = audioContext;

@@ -11,48 +11,48 @@
 </head>
 <body>
 	
+    <div class="horizontal-container">
+        <div class="container">
+            <h1>Instrument Tuner</h1>
+            <div id="pitch-display">--</div>
+            <div id="cents-display">-</div>
+            <div class="pendulum-container">
+                <div id="pendulum"></div>
+            </div>
+            <button id="toggle-tuner">Start Tuning</button>
+        </div>
+        <div class="container">
+            <h2>Metronome</h2>
+            <div class="metronome-representation">
+            </div>
+            
+            <div id="metronome-interface">
+                <div id="time-signature-container">
+                    <label for="time-signature-input">Time Signature:</label>
+                    <input type="number" id="time-signature-input" min="1" value="4">
+                </div>
+                
+                <div id="bpm-container">
+                    <label for="bpm-input">BPM:</label>
+                    <input type="number" id="bpm-input" min="1" value="120">
+                </div>
+                
+                <div id="bar-container">
+                </div>
+                  
+                <div id="sound-selector-container">
+                </div>
+                
+                <button id="play-button">Play</button>
+            </div>
+
+        </div>
+    </div>
     <div class="container">
         <h1>Rhythm Tracker</h1>
         <canvas id="rhythm-display" width="200" height="200"></canvas>
         <button id="rhythm-button">Play</button>
     </div>
-    <div class="container">
-        <h1>Instrument Tuner</h1>
-        <div id="pitch-display">--</div>
-        <div id="cents-display">-</div>
-        <div class="pendulum-container">
-            <div id="pendulum"></div>
-        </div>
-        <button id="toggle-tuner">Start Tuning</button>
-    </div>
-    </div>
-	<div class="container">
-		<h2>Metronome</h2>
-        <div class="metronome-representation">
-        </div>
-        
-        <div id="metronome-interface">
-            <div id="time-signature-container">
-                <label for="time-signature-input">Time Signature:</label>
-                <input type="number" id="time-signature-input" min="1" value="4">
-            </div>
-            
-            <div id="bpm-container">
-                <label for="bpm-input">BPM:</label>
-                <input type="number" id="bpm-input" min="1" value="120">
-            </div>
-            
-            <div id="bar-container">
-            </div>
-              
-            <div id="sound-selector-container">
-            </div>
-            
-            <button id="play-button">Play</button>
-        </div>
-
-    </div>
-
     <script src="tuner.js"></script>
     <script src="rhythmTracker.js"></script>
     <script src="metronome.js"></script>
