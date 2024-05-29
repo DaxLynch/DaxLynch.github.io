@@ -101,7 +101,7 @@ class Tuner {
         this.pendulum.style.transform = `rotate(${angle}deg)`;
 
         const redIntensity = Math.min(255, Math.abs(cents) * 5);
-        const greenIntensity = Math.max(0, 255 - Math.abs(cents) * 5);
+        const greenIntensity = Math.max(0, (255 - Math.abs(cents) * 5)+5);
         const color = `rgb(${redIntensity}, ${greenIntensity}, 0)`;
         this.pendulum.style.backgroundColor = color;
         this.pendulum.style.setProperty('--pendulum-color', color);
