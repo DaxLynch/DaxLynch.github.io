@@ -11,6 +11,19 @@ class Tuner {
         this.animationFrameId = null;
     }
 
+    initialize() {
+        const toggleButton = document.getElementById('toggle-tuner');
+        toggleButton.addEventListener('click', () => {
+            if (this.isRunning) {
+                this.stopTuner();
+                toggleButton.textContent = 'Start Tuning';
+            } else {
+                this.startTuner();
+                toggleButton.textContent = 'Stop Tuning';
+            }
+        });
+    }
+
     startTuner() {
         if (this.isRunning) return;
         this.isRunning = true;
@@ -96,18 +109,3 @@ class Tuner {
         this.animationFrameId = requestAnimationFrame(this.updatePitchDisplay);
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const tuner = new Tuner(audioContext, 'pitch-display');
-
-    document.getElementById('toggle-tuner').addEventListener('click', function() {
-        if (tuner.isRunning) {
-            tuner.stopTuner();
-            this.textContent = 'Start Tuning';
-        } else {
-            tuner.startTuner();
-            this.textContent = 'Stop Tuning';
-        }
-    });
-});
