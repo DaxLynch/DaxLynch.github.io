@@ -60,7 +60,7 @@ class RhythmTracker {
 	    .then(stream => {
 		// Set up the audio context and analyzer
 		const source = audioContext.createMediaStreamSource(stream);
-        const analyser = this.analyser
+        const analyser = this.analyser;
 		source.connect(analyser);
 
         this.bufferLength = analyser.frequencyBinCount
@@ -70,7 +70,7 @@ class RhythmTracker {
         }) 
 
         //Load the initial audio
-        const response = await fetch("tick.wav");
+        const response = await fetch("assets/tick.wav");
         this.arrayBuffer = await response.arrayBuffer();
         this.audioBuffer = await this.audioContext.decodeAudioData(this.arrayBuffer);
         this.sourceNode = this.audioContext.createBufferSource();
@@ -119,10 +119,11 @@ class RhythmTracker {
                 this.lastBeatTime = this.audioContext.currentTime;
             }
         }
+
+        this.draw() 
         if (this.recording == true && this.audioContext.currentTime > this.stopTime){ 
             //If we are passed the stopTime but recording is still on, turn it off and draw
             this.recording = false;
-            this.draw()
         }
     }
 
@@ -136,8 +137,8 @@ class RhythmTracker {
         
         const startTime = this.metronomeBeatArray[0] - (2 * this.notePeriod); //This is 1 beat before the first metronome beat
         const stopTime = this.stopTime;                                 //This is 1 beat after the final metronome click 
-        const ctx = this.canvasCtx
-        const canvas = this.canvas
+        const ctx = this.canvasCtx;
+        const canvas = this.canvas;
         const canvasWidth = canvas.width;
         const timeScale = canvasWidth / (stopTime - startTime); 
 
