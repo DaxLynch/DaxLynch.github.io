@@ -5,6 +5,7 @@ class RhythmTracker {
         //Canvas variables and functions
         this.draw = this.draw.bind(this);                       //Bind the onOff function to the class instance
         this.canvas = document.getElementById("rhythm-display");
+        this.scroller = document.getElementById("scrolling-triangle");
         this.canvasCtx = this.canvas.getContext("2d");
         this.canvas.width = .75 * window.innerWidth;
     
@@ -135,12 +136,20 @@ class RhythmTracker {
         this.canvasCtx.lineWidth = 2;
         this.canvasCtx.strokeStyle = "rgb(0 0 0)";
         
+        const currentTime = this.audioContext.currentTime;
         const startTime = this.metronomeBeatArray[0] - (2 * this.notePeriod); //This is 1 beat before the first metronome beat
         const stopTime = this.stopTime;                                 //This is 1 beat after the final metronome click 
         const ctx = this.canvasCtx;
         const canvas = this.canvas;
         const canvasWidth = canvas.width;
         const timeScale = canvasWidth / (stopTime - startTime); 
+
+        if (currentTime >= startTime && currentTime <= stopTime){
+            const scrollerX = (currentTime - startTime) * timeScale;
+            this.scroller.style.left = `${scrollerX}px`;
+        }
+
+        
 
         ctx.strokeStyle = 'black';
         for (let i = 0; i < this.beats*this.bars; i++){
@@ -160,7 +169,7 @@ class RhythmTracker {
        
         ctx.strokeStyle = 'red';
         this.recordedBeatArray.forEach(beat => {
-            const x = (beat - startTime - .25) * timeScale;             //.25 represents the FFT latency on my machine
+            const x = (beat - startTime - .1) * timeScale;             //.25 represents the FFT latency on my machine
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, canvas.height);

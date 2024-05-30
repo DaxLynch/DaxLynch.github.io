@@ -16,7 +16,7 @@ body {
   background-image: linear-gradient(-60deg, #6c3 50%, #09f 50%);
   bottom: 0;
   left: -50%;
-  opacity: .5;
+  opacity: 1;
   position: fixed;
   right: -50%;
   top: 0;
@@ -37,7 +37,7 @@ body {
   border-radius: .25em;
   box-shadow: 0 0 .25em rgba(0, 0, 0, .25);
   box-sizing: border-box;
-  padding: 10vmin;
+  padding: 5vmin;
 }
 
 .container {
@@ -46,17 +46,14 @@ body {
   background-color: #ffffff;
   padding: 20px; 
   border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 8px 8px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
   margin: 10px; 
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-}
-
-.tuner, .metronome {
-  width: 300px; 
+  opacity: .9;
 }
 
 .horizontal-container {
@@ -74,11 +71,28 @@ h1, h2 {
   margin-top: 0;
 }
 
+#metronome-interface {
+  margin-top: 10px;
+}
+
 #rhythm-display {
   font-size: 1rem;
   font-weight: bold;
   margin-top: 2rem;
   color: #666666;
+}
+
+#rhythm-display-container {
+  position: relative;
+  width: 100%; 
+}
+
+#scrolling-triangle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 60px;
 }
 
 #pitch-display {

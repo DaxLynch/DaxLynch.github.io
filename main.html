@@ -16,7 +16,7 @@
     
     <div class="content">
         <div class="horizontal-container">
-            <div class="container tuner">
+            <div class="container">
                 <h1>Instrument Tuner</h1>
                 <div id="pitch-display">--</div>
                 <div id="cents-display">-</div>
@@ -25,9 +25,8 @@
                 </div>
                 <button id="toggle-tuner">Start Tuning</button>
             </div>
-            <div class="container metronome">
+            <div class="container">
                 <h2>Metronome</h2>
-                <div class="metronome-representation"></div>
                 <div id="metronome-interface">
                     <div id="time-signature-container">
                         <label for="time-signature-input">Time Signature:</label>
@@ -45,7 +44,10 @@
         </div>
         <div class="container">
             <h1>Rhythm Tracker</h1>
-            <canvas id="rhythm-display" width="200" height="200"></canvas>
+            <div id="rhythm-display-container">
+                <canvas id="rhythm-display" width="200" height="200"></canvas>
+                <img id="scrolling-triangle" src="assets/small-triangle-down.png" alt="Scrolling Triangle">
+            </div>
             <button id="rhythm-button">Play</button>
         </div>
     </div>
