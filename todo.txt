@@ -2,7 +2,6 @@ Main site stuff:
 1. I want to have the metronome and tuner have some sort of lock,  using a global "string" passed by pointer or ref or whateve to the classes.
 so that only one can be used at a time, and if metronome is going 
 and you try to use tuner then it doesn't work, but maybe this is unneccesary
-2. Maybe some css?
 4. Make all variables, classes, and functions follow the same naming scheme
 5. Put doc strings on everyfunction and class,
 6. Put headers on each file
@@ -14,14 +13,9 @@ Visualizer
 
 
 Metronome:
-1. Make playNote handle Polyrhyythms, so have a class variable for if pr's are playing,
-make a variable for the sounds played on each beat, (soundSelection function or whateve will
-change this), make another variable for loudness of each beat, maybe gonna need two of theses,
-one for each pr.
-so for a 3/4 and 4/4 polyrhytm, the first this.notePeriod will be .25 of a bar, then the next notePeriod will be .3333 - .25 (because thats how much time is inbetween the two notes.) There should be some easy formula for calulating this. I.e at step one calculate 
 
 2. Metronome interface: 
-bpm input, polyrhythm button, make the generateBar popout another list, volume input,
+polyrhythm button, make the generateBar popout another list, volume input/turn on or off each beat
 
 3. metronome Visualizer, we will call request animatonUpdate on some function, 
 and based on the time from this.lastNote and .currentTime, and bpm, and a static variable to keep track of wheteher its swinging left or right, we can show a simple metronome bar
@@ -37,7 +31,6 @@ rhythmTracker:
 Harry todo:
 
 pitch up first tick
-polyrthythm button/functionality
+polyrthythm button
 be able to set bpm
 
-style html and css to look good.
