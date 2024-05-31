@@ -90,7 +90,7 @@ h1, h2 {
 #scrolling-triangle {
   position: absolute;
   top: 0;
-  left: 0;
+  left: 10;
   width: 40px;
   height: 60px;
 }

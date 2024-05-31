@@ -146,7 +146,7 @@ class RhythmTracker {
 
         if (currentTime >= startTime && currentTime <= stopTime){
             const scrollerX = (currentTime - startTime) * timeScale;
-            this.scroller.style.left = `${scrollerX}px`;
+            this.scroller.style.left = `${scrollerX}px + 10px`;
         }
 
         
