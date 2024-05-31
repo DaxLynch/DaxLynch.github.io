@@ -1,5 +1,4 @@
 Main site stuff:
-1. I want to have the metronome and tuner have some sort of lock,  using a global "string" passed by pointer or ref or whateve to the classes.
 so that only one can be used at a time, and if metronome is going 
 and you try to use tuner then it doesn't work, but maybe this is unneccesary
 4. Make all variables, classes, and functions follow the same naming scheme
@@ -8,14 +7,11 @@ and you try to use tuner then it doesn't work, but maybe this is unneccesary
 
 
 1. Tuner:
-Visualizer
 
 
 
 Metronome:
 
-2. Metronome interface: 
-polyrhythm button, make the generateBar popout another list, volume input/turn on or off each beat
 
 3. metronome Visualizer, we will call request animatonUpdate on some function, 
 and based on the time from this.lastNote and .currentTime, and bpm, and a static variable to keep track of wheteher its swinging left or right, we can show a simple metronome bar
