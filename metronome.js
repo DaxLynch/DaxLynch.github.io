@@ -20,6 +20,7 @@ class Metronome {
         this.polyBarContainer = document.getElementById('poly-bar-container');
         this.timeSignatureInput = document.getElementById('time-signature-input');
         this.bpmInput = document.getElementById('bpm-input'); // Get the BPM input element
+        this.polyInput = null; 
         this.playButton = document.getElementById('play-button');
         this.polyButton = document.getElementById('poly-button');
 
@@ -32,20 +33,29 @@ class Metronome {
         this.bpm = this.bpmInput.value; // Get the initial BPM value
 
         this.audiosPerBeat = [0,0,0,0] //keeps track of which audio is to be played
-        this.audiosPerBeatP = Array(this.timeSignatureP).fill(0)  //keeps track of which audio is to be played, polyrhythm
+        this.audiosPerBeatP = Array(this.timeSignatureP).fill(1)  //keeps track of which audio is to be played, polyrhythm
 
         this.notePeriod = 60 / this.bpm; // Calculate the initial note period based on BPM
         this.notePeriodP = 60 / (this.bpm  * this.polyRatio); // Calculate the polyrhythms initial note period based on BPM
 
         this.timeSignatureInput.addEventListener('input', (event) => {
             this.timeSignature = event.target.value;
-            this.timeSignatureP = this.timeSignature * this.polyRatio
+            this.playButton.value = "Off";
+            this.lastNote = 0;
+            this.lastNoteP = 0;
+            this.playing = false;
+         
             this.generateBar();
         }); 
 
         // Add event listener to update BPM and note period when BPM changes
         this.bpmInput.addEventListener('input', (event) => {
             this.bpm = event.target.value;
+            this.playButton.value = "Off";
+            this.lastNote = 0;
+            this.lastNoteP = 0;
+            this.playing = false;
+                
             this.notePeriod = 60 / this.bpm; // Update note period based on new BPM
             this.notePeriodP = 60 / (this.bpm  * this.polyRatio); // Calculate the polyrhythms initial note period based on BPM
         });
@@ -68,12 +78,12 @@ class Metronome {
             this.lastNote = 0;
             this.lastNoteP = 0;
         } else {
-            this.playButton.value = "On";
+            this.playButton.value = "On"; 
             console.log("Turned on");
             if (this.polyrhythmActive == true){
                 this.playing = true;
                 this.lastNote = this.audioContext.currentTime - this.notePeriod + .001;
-                this.lastNoteP = this.lastNote + this.notePeriod - this.notePeriodP; //remove this or alter it for polyrhythms n shit
+                this.lastNoteP = this.lastNote + this.notePeriod - this.notePeriodP;
                 this.currentBeat = 0; // Reset the current beat when the metronome starts.
                 this.currentBeatP = 0; // Reset the current beat when the metronome starts.
             } else {
@@ -94,10 +104,35 @@ class Metronome {
             this.lastNote = 0;
             this.lastNoteP = 0;
             this.playing = false;
+            document.getElementById("time-signature-container").removeChild(this.polyInputLabel)
+            document.getElementById("time-signature-container").removeChild(this.polyInput)
+            
             this.generateBar();
         } else {
             this.polyButton.value = "On";
             this.playButton.value = "Off";
+
+            this.polyInput = document.createElement('input');
+            this.polyInputLabel = document.createElement('label');
+            this.polyInput.type = "number";
+            this.polyInput.id = "poly-input";
+            this.polyInput.min = "3";
+            this.polyInput.value = "6";
+            this.polyInput.max = "9";
+            this.polyInputLabel.htmlFor = "poly-input";
+            this.polyInputLabel.innerText  = "Time Signature for Poly";
+            document.getElementById("time-signature-container").appendChild(this.polyInputLabel)
+            document.getElementById("time-signature-container").appendChild(this.polyInput)
+            this.polyInput.addEventListener('input', (event) => {
+                this.polyRatio = event.target.value / this.timeSignature
+                this.notePeriodP = 60 / (this.bpm  * this.polyRatio); // Calculate the polyrhythms initial note period based on BPM
+                this.playButton.value = "Off";
+                this.lastNote = 0;
+                this.lastNoteP = 0;
+                this.playing = false;
+                
+                this.generateBar();
+            });
             this.polyButton.innerText = "Remove Polyrhythm";
             this.polyrhythmActive = true 
             this.lastNote = 0;           //this.audioContext.currentTime - this.notePeriod + .001;
@@ -132,9 +167,14 @@ class Metronome {
         //Figure out which beat get played next,
         if ((beatIndex == 0) && (beatIndexP == 0)){ //If both beats are at 0, play only the first track
             //Play the first sound, increment both sets,
-            sourceNode.buffer = this.audioBuffer[0 + this.audioFiles.length/2];  //FIXME once new sounds are added
+            sourceNode.buffer = this.audioBuffer[this.audiosPerBeat[beatIndex] + this.audioFiles.length/2]; 
             sourceNode.connect(this.audioContext.destination);
             sourceNode.start(this.lastNote + this.notePeriod);
+           
+            const sourceNode2 = this.audioContext.createBufferSource();
+            sourceNode2.buffer = this.audioBuffer[this.audiosPerBeatP[beatIndexP] + this.audioFiles.length/2];
+            sourceNode2.connect(this.audioContext.destination);
+            sourceNode2.start(this.lastNote + this.notePeriod); 
 
             this.currentBeatP++;
             this.currentBeat++;
@@ -248,7 +288,7 @@ class Metronome {
                     this.barContainer.appendChild(beatContainer);
                 }
 
-                this.audiosPerBeatP = Array(beatsPerBar*this.polyRatio).fill(0) 
+                this.audiosPerBeatP = Array(beatsPerBar*this.polyRatio).fill(1) 
                 this.polyBarContainer.innerHTML = '';
                 for (let i = 0; i < beatsPerBar*this.polyRatio; i++) {
                     const beatContainer = document.createElement('div');
