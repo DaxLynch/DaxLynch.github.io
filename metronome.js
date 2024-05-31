@@ -12,12 +12,16 @@ class Metronome {
         this.polyrhythmActive = false;
         this.intervalId = null; // setInterval is assigned to
         this.onOff = this.onOff.bind(this);
+        this.polyOnOff = this.polyOnOff.bind(this);
 
         this.timeSignatureContainer = document.getElementById('time-signature-container');
+        this.barsContainer = document.getElementById('bars-container');
         this.barContainer = document.getElementById('bar-container');
+        this.polyBarContainer = document.getElementById('poly-bar-container');
         this.timeSignatureInput = document.getElementById('time-signature-input');
         this.bpmInput = document.getElementById('bpm-input'); // Get the BPM input element
         this.playButton = document.getElementById('play-button');
+        this.polyButton = document.getElementById('poly-button');
 
         this.polyRatio  = 3.0/2.0
 
@@ -28,7 +32,7 @@ class Metronome {
         this.bpm = this.bpmInput.value; // Get the initial BPM value
 
         this.audiosPerBeat = [0,0,0,0] //keeps track of which audio is to be played
-        this.audiosPerBeatP = Array(this.timeSignatureP).fill(1)  //keeps track of which audio is to be played, polyrhythm
+        this.audiosPerBeatP = Array(this.timeSignatureP).fill(0)  //keeps track of which audio is to be played, polyrhythm
 
         this.notePeriod = 60 / this.bpm; // Calculate the initial note period based on BPM
         this.notePeriodP = 60 / (this.bpm  * this.polyRatio); // Calculate the polyrhythms initial note period based on BPM
@@ -37,7 +41,7 @@ class Metronome {
             this.timeSignature = event.target.value;
             this.timeSignatureP = this.timeSignature * this.polyRatio
             this.generateBar();
-        });
+        }); 
 
         // Add event listener to update BPM and note period when BPM changes
         this.bpmInput.addEventListener('input', (event) => {
@@ -53,6 +57,8 @@ class Metronome {
         this.intervalId = setInterval(() => this.scheduler(), 100);
     }
 
+     
+
     onOff() { // Allows the play button to operate as a toggle
         const currentValue = this.playButton.value;
         if (currentValue === "On") {
@@ -64,12 +70,42 @@ class Metronome {
         } else {
             this.playButton.value = "On";
             console.log("Turned on");
-            this.playing = true;
-            this.lastNote = this.audioContext.currentTime - this.notePeriod + .001;
-            this.lastNoteP = this.lastNote + this.notePeriod - this.notePeriodP; //remove this or alter it for polyrhythms n shit
-            this.polyrhythmActive = true
-            this.currentBeat = 0; // Reset the current beat when the metronome starts.
-            this.currentBeatP = 0; // Reset the current beat when the metronome starts.
+            if (this.polyrhythmActive == true){
+                this.playing = true;
+                this.lastNote = this.audioContext.currentTime - this.notePeriod + .001;
+                this.lastNoteP = this.lastNote + this.notePeriod - this.notePeriodP; //remove this or alter it for polyrhythms n shit
+                this.currentBeat = 0; // Reset the current beat when the metronome starts.
+                this.currentBeatP = 0; // Reset the current beat when the metronome starts.
+            } else {
+                this.playing = true;
+                this.lastNote = this.audioContext.currentTime - this.notePeriod + .001;
+                this.currentBeat = 0; // Reset the current beat when the metronome starts.
+            }
+        }
+    }
+
+    polyOnOff() { // Allows the play button to operate as a toggle
+        const currentValue = this.polyButton.value;
+        if (currentValue === "On") {
+            this.polyButton.innerText = "Add Polyrhythm";
+            this.polyButton.value = "Off";
+            this.playButton.value = "Off";
+            this.polyrhythmActive = false;
+            this.lastNote = 0;
+            this.lastNoteP = 0;
+            this.playing = false;
+            this.generateBar();
+        } else {
+            this.polyButton.value = "On";
+            this.playButton.value = "Off";
+            this.polyButton.innerText = "Remove Polyrhythm";
+            this.polyrhythmActive = true 
+            this.lastNote = 0;           //this.audioContext.currentTime - this.notePeriod + .001;
+            this.lastNoteP = 0;          //this.lastNote + this.notePeriod - this.notePeriodP; //remove this or alter it for polyrhythms n shit
+            this.currentBeat = 0;        // Reset the current beat when the metronome starts.
+            this.currentBeatP = 0;       // Reset the current beat when the metronome starts.
+            this.playing = false;
+            this.generateBar();
         }
     }
 
@@ -88,14 +124,12 @@ class Metronome {
         this.lastNote += this.notePeriod;
         this.currentBeat++;
     }
-    playNotePoly() {
+    playNotePoly() { //When turn off make sure to zero poly-bar-container
         const beatIndex = this.currentBeat % this.timeSignature;
         const beatIndexP = this.currentBeatP % this.timeSignatureP;
     
         const sourceNode = this.audioContext.createBufferSource();
         //Figure out which beat get played next,
-        console.log(beatIndex)
-        console.log(beatIndexP)
         if ((beatIndex == 0) && (beatIndexP == 0)){ //If both beats are at 0, play only the first track
             //Play the first sound, increment both sets,
             sourceNode.buffer = this.audioBuffer[0 + this.audioFiles.length/2];  //FIXME once new sounds are added
@@ -126,7 +160,6 @@ class Metronome {
             }
             this.currentBeatP++;
             sourceNode.connect(this.audioContext.destination);
-            console.log(this.lastNoteP + this.notePeriodP)
             sourceNode.start(this.lastNoteP + this.notePeriodP);
             this.lastNoteP += this.notePeriodP; //Only do this if this is the note we incremented
 
@@ -157,6 +190,7 @@ class Metronome {
 
     async initialize() { // Initializes the WebAudio objects and starts the scheduler
         this.playButton.addEventListener('click', this.onOff);
+        this.polyButton.addEventListener('click', this.polyOnOff);
 
         // Load the audio files
         for (let i = 0; i < this.audioFiles.length; i++) { // initializes the audio files from array
@@ -171,36 +205,91 @@ class Metronome {
     generateBar() { // Generates the bar of icons
         const beatsPerBar = parseInt(this.timeSignatureInput.value);
         if (!isNaN(beatsPerBar)) {
-            this.audiosPerBeat = Array(beatsPerBar).fill(0) 
-            this.barContainer.innerHTML = '';
-            for (let i = 0; i < beatsPerBar; i++) {
-                const beatContainer = document.createElement('div');
-                beatContainer.classList.add('beat-container'); // Create a container
+            if(this.polyrhythmActive == false){
+                this.audiosPerBeat = Array(beatsPerBar).fill(0) 
+                this.polyBarContainer.innerHTML = '';
+                this.barContainer.innerHTML = '';
+                for (let i = 0; i < beatsPerBar; i++) {
+                    const beatContainer = document.createElement('div');
+                    beatContainer.classList.add('beat-container'); // Create a container
 
-                const soundFileNames = ['assets/chime.png', 'assets/cymbal.png', 'assets/cowbell.png'];
-                soundFileNames.forEach((iconSrc, index) => {
-                    const iconImg = document.createElement('img');
-                    iconImg.src = iconSrc;
-                    iconImg.alt = `Sound ${index + 1}`;
-                    iconImg.dataset.sound = index; // Store the sound index as data
-                    iconImg.addEventListener('click', this.handleSoundSelection.bind(this));
-                    beatContainer.appendChild(iconImg);
-                });
+                    const soundFileNames = ['assets/cowbell.png', 'assets/chime.png', 'assets/cymbal.png'] ;
+                    soundFileNames.forEach((iconSrc, index) => {
+                        const iconImg = document.createElement('img');
+                        iconImg.src = iconSrc;
+                        iconImg.alt = `Sound ${index + 1}`;
+                        iconImg.dataset.sound = index; // Store the sound index as data
+                        iconImg.dataset.track = "standard"; // Store which track it belongs too
+                        iconImg.addEventListener('click', this.handleSoundSelection.bind(this));
+                        beatContainer.appendChild(iconImg);
+                    });
 
-                this.barContainer.appendChild(beatContainer);
+                    this.barContainer.appendChild(beatContainer);
+                }
+            } else {
+ 
+                this.audiosPerBeat = Array(beatsPerBar).fill(0) 
+                this.barContainer.innerHTML = '';
+                for (let i = 0; i < beatsPerBar; i++) {
+                    const beatContainer = document.createElement('div');
+                    beatContainer.classList.add('beat-container'); // Create a container
+
+                    const soundFileNames = ['assets/cowbell.png', 'assets/chime.png', 'assets/cymbal.png'] ;
+                    soundFileNames.forEach((iconSrc, index) => {
+                        const iconImg = document.createElement('img');
+                        iconImg.src = iconSrc;
+                        iconImg.alt = `Sound ${index + 1}`;
+                        iconImg.dataset.sound = index; // Store the sound index as data
+                        iconImg.dataset.track = "standard"; // Store which track it belongs too
+                        iconImg.addEventListener('click', this.handleSoundSelection.bind(this));
+                        beatContainer.appendChild(iconImg);
+                    });
+
+                    this.barContainer.appendChild(beatContainer);
+                }
+
+                this.audiosPerBeatP = Array(beatsPerBar*this.polyRatio).fill(0) 
+                this.polyBarContainer.innerHTML = '';
+                for (let i = 0; i < beatsPerBar*this.polyRatio; i++) {
+                    const beatContainer = document.createElement('div');
+                    beatContainer.classList.add('beat-container'); // Create a container
+
+                    const soundFileNames = ['assets/cowbell.png', 'assets/chime.png', 'assets/cymbal.png'] ;
+                    soundFileNames.forEach((iconSrc, index) => {
+                        const iconImg = document.createElement('img');
+                        iconImg.src = iconSrc;
+                        iconImg.alt = `Sound ${index + 1}`;
+                        iconImg.dataset.sound = index; // Store the sound index as data
+                        iconImg.dataset.track = "poly"; // Store which track it belongs too
+                        iconImg.addEventListener('click', this.handleSoundSelection.bind(this));
+                        beatContainer.appendChild(iconImg);
+                    });
+
+                    this.polyBarContainer.appendChild(beatContainer);
+                }
+
+
+
+
+
             }
-        }
+         }
     }
 
     handleSoundSelection(event) {
         const selectedSound = parseInt(event.target.dataset.sound);
         const beatIndex = Array.from(event.target.parentNode.parentNode.children).indexOf(event.target.parentNode);
-        this.updateMetronomeSound(selectedSound, beatIndex);
+        const track = event.target.dataset.track;
+        this.updateMetronomeSound(selectedSound, beatIndex, track);
     }
 
-    updateMetronomeSound(selectedSound, beatIndex) {
-        this.audiosPerBeat[beatIndex] = selectedSound;
-        console.log(`Selected sound ${selectedSound} for beat ${beatIndex}`);
+    updateMetronomeSound(selectedSound, beatIndex, track) {
+        if (track == "standard"){
+            this.audiosPerBeat[beatIndex] = selectedSound;
+        } else { 
+            this.audiosPerBeatP[beatIndex] = selectedSound;
+        }
+        console.log(`Selected sound ${selectedSound} for beat ${beatIndex} for the ${track} track`);
     }
 }
 
