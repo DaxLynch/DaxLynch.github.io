@@ -144,9 +144,13 @@ class RhythmTracker {
         const canvasWidth = canvas.width;
         const timeScale = canvasWidth / (stopTime - startTime); 
 
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const containerRect = this.canvas.parentElement.getBoundingClientRect();
+        const offsetX = canvasRect.left - containerRect.left;
+
         if (currentTime >= startTime && currentTime <= stopTime){
-            const scrollerX = (currentTime - startTime) * timeScale;
-            this.scroller.style.left = `${scrollerX}px + 10px`;
+            const scrollerX = (currentTime - startTime) * timeScale + offsetX;
+            this.scroller.style.left = `${scrollerX}px`;
         }
 
         
@@ -169,7 +173,7 @@ class RhythmTracker {
        
         ctx.strokeStyle = 'red';
         this.recordedBeatArray.forEach(beat => {
-            const x = (beat - startTime - .1) * timeScale;             //.25 represents the FFT latency on my machine
+            const x = (beat - startTime + .25) * timeScale;             //.25 represents the FFT latency on my machine
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, canvas.height);
