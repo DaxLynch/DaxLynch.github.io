@@ -137,7 +137,7 @@ class RhythmTracker {
         this.canvasCtx.strokeStyle = "rgb(0 0 0)";
         
         const currentTime = this.audioContext.currentTime;
-        const startTime = this.metronomeBeatArray[0] - (2 * this.notePeriod); //This is 1 beat before the first metronome beat
+        const startTime = this.metronomeBeatArray[0] - (1 * this.notePeriod); //This is 1 beat before the first metronome beat
         const stopTime = this.stopTime;                                 //This is 1 beat after the final metronome click 
         const ctx = this.canvasCtx;
         const canvas = this.canvas;
