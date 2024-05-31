@@ -32,7 +32,7 @@ class Metronome {
         this.bpm = this.bpmInput.value; // Get the initial BPM value
 
         this.audiosPerBeat = [0,0,0,0] //keeps track of which audio is to be played
-        this.audiosPerBeatP = Array(this.timeSignatureP).fill(1)  //keeps track of which audio is to be played, polyrhythm
+        this.audiosPerBeatP = Array(this.timeSignatureP).fill(0)  //keeps track of which audio is to be played, polyrhythm
 
         this.notePeriod = 60 / this.bpm; // Calculate the initial note period based on BPM
         this.notePeriodP = 60 / (this.bpm  * this.polyRatio); // Calculate the polyrhythms initial note period based on BPM
@@ -70,12 +70,17 @@ class Metronome {
         } else {
             this.playButton.value = "On";
             console.log("Turned on");
-            this.playing = true;
-            this.lastNote = this.audioContext.currentTime - this.notePeriod + .001;
-            this.lastNoteP = this.lastNote + this.notePeriod - this.notePeriodP; //remove this or alter it for polyrhythms n shit
-            this.polyrhythmActive = true
-            this.currentBeat = 0; // Reset the current beat when the metronome starts.
-            this.currentBeatP = 0; // Reset the current beat when the metronome starts.
+            if (this.polyrhythmActive == true){
+                this.playing = true;
+                this.lastNote = this.audioContext.currentTime - this.notePeriod + .001;
+                this.lastNoteP = this.lastNote + this.notePeriod - this.notePeriodP; //remove this or alter it for polyrhythms n shit
+                this.currentBeat = 0; // Reset the current beat when the metronome starts.
+                this.currentBeatP = 0; // Reset the current beat when the metronome starts.
+            } else {
+                this.playing = true;
+                this.lastNote = this.audioContext.currentTime - this.notePeriod + .001;
+                this.currentBeat = 0; // Reset the current beat when the metronome starts.
+            }
         }
     }
 
@@ -208,12 +213,13 @@ class Metronome {
                     const beatContainer = document.createElement('div');
                     beatContainer.classList.add('beat-container'); // Create a container
 
-                    const soundFileNames = ['assets/chime.png', 'assets/cymbal.png', 'assets/cowbell.png'];
+                    const soundFileNames = ['assets/cowbell.png', 'assets/chime.png', 'assets/cymbal.png'] ;
                     soundFileNames.forEach((iconSrc, index) => {
                         const iconImg = document.createElement('img');
                         iconImg.src = iconSrc;
                         iconImg.alt = `Sound ${index + 1}`;
                         iconImg.dataset.sound = index; // Store the sound index as data
+                        iconImg.dataset.track = "standard"; // Store which track it belongs too
                         iconImg.addEventListener('click', this.handleSoundSelection.bind(this));
                         beatContainer.appendChild(iconImg);
                     });
@@ -228,12 +234,13 @@ class Metronome {
                     const beatContainer = document.createElement('div');
                     beatContainer.classList.add('beat-container'); // Create a container
 
-                    const soundFileNames = ['assets/chime.png', 'assets/cymbal.png', 'assets/cowbell.png'];
+                    const soundFileNames = ['assets/cowbell.png', 'assets/chime.png', 'assets/cymbal.png'] ;
                     soundFileNames.forEach((iconSrc, index) => {
                         const iconImg = document.createElement('img');
                         iconImg.src = iconSrc;
                         iconImg.alt = `Sound ${index + 1}`;
                         iconImg.dataset.sound = index; // Store the sound index as data
+                        iconImg.dataset.track = "standard"; // Store which track it belongs too
                         iconImg.addEventListener('click', this.handleSoundSelection.bind(this));
                         beatContainer.appendChild(iconImg);
                     });
@@ -247,12 +254,13 @@ class Metronome {
                     const beatContainer = document.createElement('div');
                     beatContainer.classList.add('beat-container'); // Create a container
 
-                    const soundFileNames = ['assets/chime.png', 'assets/cymbal.png', 'assets/cowbell.png'];
+                    const soundFileNames = ['assets/cowbell.png', 'assets/chime.png', 'assets/cymbal.png'] ;
                     soundFileNames.forEach((iconSrc, index) => {
                         const iconImg = document.createElement('img');
                         iconImg.src = iconSrc;
                         iconImg.alt = `Sound ${index + 1}`;
                         iconImg.dataset.sound = index; // Store the sound index as data
+                        iconImg.dataset.track = "poly"; // Store which track it belongs too
                         iconImg.addEventListener('click', this.handleSoundSelection.bind(this));
                         beatContainer.appendChild(iconImg);
                     });
@@ -271,12 +279,17 @@ class Metronome {
     handleSoundSelection(event) {
         const selectedSound = parseInt(event.target.dataset.sound);
         const beatIndex = Array.from(event.target.parentNode.parentNode.children).indexOf(event.target.parentNode);
-        this.updateMetronomeSound(selectedSound, beatIndex);
+        const track = event.target.dataset.track;
+        this.updateMetronomeSound(selectedSound, beatIndex, track);
     }
 
-    updateMetronomeSound(selectedSound, beatIndex) {
-        this.audiosPerBeat[beatIndex] = selectedSound;
-        console.log(`Selected sound ${selectedSound} for beat ${beatIndex}`);
+    updateMetronomeSound(selectedSound, beatIndex, track) {
+        if (track == "standard"){
+            this.audiosPerBeat[beatIndex] = selectedSound;
+        } else { 
+            this.audiosPerBeatP[beatIndex] = selectedSound;
+        }
+        console.log(`Selected sound ${selectedSound} for beat ${beatIndex} for the ${track} track`);
     }
 }
 
