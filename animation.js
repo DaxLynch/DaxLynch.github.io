@@ -74,7 +74,7 @@ class MetronomeAnimation {
         this.height = this.canvas.height;
 
         this.x = 0;
-        this.speed = 2;
+        this.speed = 5;
         this.radius = 10;
         this.archHeight = this.height - this.radius;
         this.centerY = this.height;
@@ -108,7 +108,7 @@ class MetronomeAnimation {
     drawDot(x, y) {
         this.ctx.beginPath();
         this.ctx.arc(x, y, this.radius, 0, Math.PI * 2);
-        if (x < ((this.width / 2) + this.radius) && x > ((this.width / 2) - this.radius)) {
+        if (x < ((this.width / 2) + this.radius * 2) && x > ((this.width / 2) - this.radius * 2)) {
             this.ctx.fillStyle = 'green';
         }
         else {
@@ -119,10 +119,19 @@ class MetronomeAnimation {
     }
 
     drawMiddleLine() {
-        // Draw a horizontal line through the middle
+        // Draw a vertical line through the middle
         this.ctx.beginPath();
         this.ctx.moveTo(canvas.width / 2, 0); // Locate middle of the canvas
         this.ctx.lineTo(canvas.width / 2, canvas.height); // Draw to the top of the canvas
+        this.ctx.strokeStyle = "blue";
+        this.ctx.stroke(); // Render the line
+    }
+
+    drawLineToDot(x, y) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(canvas.width / 2, canvas.height);
+        this.ctx.strokeStyle = "red";
+        this.ctx.lineTo(x, y);
         this.ctx.stroke(); // Render the line
     }
 
@@ -133,6 +142,7 @@ class MetronomeAnimation {
         const y = this.centerY - this.archHeight * Math.sin((Math.PI * this.x) / this.width);
 
         this.drawMiddleLine();
+        this.drawLineToDot(this.x, y);
         this.drawDot(this.x, y);
 
         this.x += this.speed;
