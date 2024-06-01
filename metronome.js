@@ -66,7 +66,7 @@ class Metronome {
         this.generateBar();
         this.intervalId = setInterval(() => this.scheduler(), 100);
 
-        this.visualizer = new MetronomeAnimation('canvas', 'speed', 'radius', 'archeight');   // Instantiate BouncingDotAnimation
+        this.visualizer = new MetronomeAnimation('canvas', 'speed', 'radius', 'archeight');   // Instantiate MetronomeAnimation
         this.visualizer.start();
     }
 
@@ -74,12 +74,15 @@ class Metronome {
         const currentValue = this.playButton.value;
         if (currentValue === "On") {
             this.playButton.value = "Off";
+            this.playButton.innerHTML = "Play";
             console.log("Turned off"); // Add code to stop the metronome if it's playing
             this.playing = false;
             this.lastNote = 0;
             this.lastNoteP = 0;
+            this.visualizer.stop();
         } else {
             this.playButton.value = "On"; 
+            this.playButton.innerHTML = "Stop";
             console.log("Turned on");
             this.playing = true;
             this.lastNote = this.audioContext.currentTime - this.notePeriod + 0.001;
@@ -88,6 +91,7 @@ class Metronome {
             }
             this.currentBeat = 0; // Reset the current beat when the metronome starts.
             this.currentBeatP = 0; // Reset the current beat when the metronome starts.
+            this.visualizer.play();
         }
     }
 

@@ -73,7 +73,7 @@ class MetronomeAnimation {
         this.width = this.canvas.width;
         this.height = this.canvas.height;
 
-        this.x = 0;
+        this.x = this.width / 2;
         this.speed = 5;
         this.radius = 10;
         this.archHeight = this.height - this.radius;
@@ -82,6 +82,7 @@ class MetronomeAnimation {
         this.speedInput = document.getElementById(speedInputId);
         this.radiusInput = document.getElementById(radiusInputId);
         this.archHeightInput = document.getElementById(archHeightInputId);
+        this.playing = false;
 
         this.setupEventListeners();
     }
@@ -138,17 +139,20 @@ class MetronomeAnimation {
     animate() {
         this.ctx.clearRect(0, 0, this.width, this.height);
 
+        if (this.playing) {
+            // console.log("Playing is true");
+            this.x += this.speed;
+            if (this.x > this.width || this.x <= 0) {
+                this.speed = -this.speed;
+            }
+        }
+
         // Calculate y position based on an arch function
         const y = this.centerY - this.archHeight * Math.sin((Math.PI * this.x) / this.width);
 
         this.drawMiddleLine();
         this.drawLineToDot(this.x, y);
         this.drawDot(this.x, y);
-
-        this.x += this.speed;
-        if (this.x > this.width || this.x <= 0) {
-            this.speed = -this.speed;
-        }
 
         requestAnimationFrame(() => this.animate());
     }
@@ -157,8 +161,24 @@ class MetronomeAnimation {
         this.animate();
     }
 
+    play() {
+        this.playing = true;
+        // console.log("Playing should be true");
+    }
+
+    stop() {
+        this.playing = false;
+        this.reset();
+    }
+
     reset() {
         this.x = this.width / 2;
+        if (this.speed < 0) {
+            this.speed = -this.speed;
+        }
+        else {
+            this.speed = this.speed;
+        }
     }
 }
 
