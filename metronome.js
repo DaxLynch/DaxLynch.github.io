@@ -65,6 +65,9 @@ class Metronome {
 
         this.generateBar();
         this.intervalId = setInterval(() => this.scheduler(), 100);
+
+        this.visualizer = new MetronomeAnimation('canvas', 'speed', 'radius', 'archeight');   // Instantiate BouncingDotAnimation
+        this.visualizer.start();
     }
 
     onOff() { // Allows the play button to operate as a toggle
@@ -308,4 +311,5 @@ class Metronome {
         }
         console.log(`Selected sound ${selectedSound} for beat ${beatIndex} for the ${track} track`);
     }
+
 }
