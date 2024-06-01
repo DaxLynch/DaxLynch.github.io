@@ -108,9 +108,22 @@ class MetronomeAnimation {
     drawDot(x, y) {
         this.ctx.beginPath();
         this.ctx.arc(x, y, this.radius, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'red';
+        if (x < ((this.width / 2) + this.radius) && x > ((this.width / 2) - this.radius)) {
+            this.ctx.fillStyle = 'green';
+        }
+        else {
+            this.ctx.fillStyle = 'red';
+        }
         this.ctx.fill();
         this.ctx.closePath();
+    }
+
+    drawMiddleLine() {
+        // Draw a horizontal line through the middle
+        this.ctx.beginPath();
+        this.ctx.moveTo(canvas.width / 2, 0); // Locate middle of the canvas
+        this.ctx.lineTo(canvas.width / 2, canvas.height); // Draw to the top of the canvas
+        this.ctx.stroke(); // Render the line
     }
 
     animate() {
@@ -119,6 +132,7 @@ class MetronomeAnimation {
         // Calculate y position based on an arch function
         const y = this.centerY - this.archHeight * Math.sin((Math.PI * this.x) / this.width);
 
+        this.drawMiddleLine();
         this.drawDot(this.x, y);
 
         this.x += this.speed;
