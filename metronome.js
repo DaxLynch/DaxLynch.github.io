@@ -91,7 +91,7 @@ class Metronome {
     polyOnOff() { // Allows the poly button to operate as a toggle
         const currentValue = this.polyButton.value;
         if (currentValue === "On") {
-            this.polyButton.innerText = "Add Polyrhythm";
+            this.polyButton.innerText = "+Polyrhythm";
             this.polyButton.value = "Off";
             this.playButton.value = "Off";
             this.polyrhythmActive = false;
@@ -128,7 +128,7 @@ class Metronome {
                 
                 this.generateBar();
             });
-            this.polyButton.innerText = "Remove Polyrhythm";
+            this.polyButton.innerText = "-Polyrhythm";
             this.polyrhythmActive = true;
             this.lastNote = 0; 
             this.lastNoteP = 0;

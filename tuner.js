@@ -92,9 +92,15 @@ class Tuner {
         this.analyser.getByteFrequencyData(this.dataArray);
         const maxIndex = this.dataArray.indexOf(Math.max(...this.dataArray));
         const pitch = maxIndex * this.audioContext.sampleRate / this.analyser.fftSize;
-        const [note, cents] = this.pitchClassAndCents(pitch);
+        let [note, cents] = this.pitchClassAndCents(pitch);
+
+        if (Math.abs(cents) <= 5) {
+            cents = 0;
+        }
+
         this.pitchDisplay.textContent = `${note}`;
         this.centsDisplay.textContent = `${cents > 0 ? '+' : ''}${cents} cents`;
+
 
         const maxAngle = 60;
         const angle = ((cents / 50) * maxAngle) + 180;
