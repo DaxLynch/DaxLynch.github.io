@@ -43,6 +43,14 @@ class RhythmTracker {
         const button = document.getElementById("rhythm-button");
         button.addEventListener("click", () => {
             if (this.recording == false) {
+
+                const bpmInput = document.getElementById("rt-bpm-input");
+                const newBPM = parseInt(bpmInput.value);
+                if (newBPM > 0 && newBPM <= 250){
+                    this.BPM = newBPM;
+                }
+                this.notePeriod = 60.0 / this.BPM;
+                this.beatSpacing = (60.0 * this.temporalSensitivity / this.BPM);
                 this.recordedBeatArray = [];
                 this.metronomeBeatArray = [];
                 this.startTime = this.audioContext.currentTime;
