@@ -1,4 +1,4 @@
-class Tuner {
+class Tuner { // 
     constructor(audioContext, pitchDisplayId) {
         this.audioContext = audioContext;
         this.pitchDisplay = document.getElementById(pitchDisplayId);
@@ -62,6 +62,8 @@ class Tuner {
         this.pendulum.style.transform = 'rotate(180deg)';
         this.pendulum.style.backgroundColor = 'black';
     }
+
+
 
     pitchClassAndCents(pitch) {
         if (pitch === 0) { return ["--", 0]; }
