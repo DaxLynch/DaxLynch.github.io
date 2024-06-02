@@ -1,6 +1,6 @@
 class RhythmTracker {
     constructor(audioContext) {
-        //Canvas variables and functions
+        // Canvas variables and functions
         this.draw = this.draw.bind(this);
         this.canvas = document.getElementById("rhythm-display");
         this.scroller = document.getElementById("scrolling-triangle");
@@ -17,7 +17,7 @@ class RhythmTracker {
         this.analyser.fftSize = 256;
         this.analyser.smoothingTimeConstant = 0;
 
-        //Audio Buffer variables 
+        // Audio Buffer variables 
         this.sourceNode = null;
         this.arrayBuffer = null;
         this.audioBuffer = null;
@@ -27,27 +27,27 @@ class RhythmTracker {
         this.beats = 4;
         this.notePeriod = 60.0 / this.BPM;
 
-        //Variables for beat detection algorithm
+        // Variables for beat detection algorithm
         this.sensitivity = 200;
         this.temporalSensitivity = 1 / 3;
         this.lastBeatTime = this.audioContext.currentTime;
         this.beatSpacing = (60.0 * this.temporalSensitivity / this.BPM);
 
-        //Variables for recording beats
+        // Variables for recording beats
         this.startTime = this.audioContext.currentTime;
         this.metronomeBeatArray = [];
         this.recordedBeatArray = [];
         this.record = this.record.bind(this);
         this.recording = false;
+        this.scheduledNodes = [];
 
         const button = document.getElementById("rhythm-button");
+        button.textContent = "Start"; // Ensure the button text is initially "Start"
         button.addEventListener("click", () => {
-            if (this.recording == false) {
-                this.recordedBeatArray = [];
-                this.metronomeBeatArray = [];
-                this.startTime = this.audioContext.currentTime;
-                this.schedule();
-                this.recording = true;
+            if (!this.recording) {
+                this.startRecording(button);
+            } else {
+                this.stopRecording(button);
             }
         });
     }
@@ -55,7 +55,7 @@ class RhythmTracker {
     async initialize() {
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
-                const source = audioContext.createMediaStreamSource(stream);
+                const source = this.audioContext.createMediaStreamSource(stream);
                 const analyser = this.analyser;
                 source.connect(analyser);
 
@@ -69,9 +69,6 @@ class RhythmTracker {
         const response = await fetch("assets/tick.wav");
         this.arrayBuffer = await response.arrayBuffer();
         this.audioBuffer = await this.audioContext.decodeAudioData(this.arrayBuffer);
-        this.sourceNode = this.audioContext.createBufferSource();
-        this.sourceNode.buffer = this.audioBuffer;
-        this.sourceNode.connect(this.audioContext.destination);
 
         // Load the high note for the beginning of each four bars
         const responseHigh = await fetch("assets/tick_high.wav");
@@ -81,25 +78,46 @@ class RhythmTracker {
         requestAnimationFrame(this.record);
     }
 
+    startRecording(button) {
+        this.recordedBeatArray = [];
+        this.metronomeBeatArray = [];
+        this.startTime = this.audioContext.currentTime;
+        this.schedule();
+        this.recording = true;
+        button.textContent = "Stop";
+    }
+
+    stopRecording(button) {
+        this.recording = false;
+        button.textContent = "Start";
+        this.clearScheduledNodes();
+    }
+
     schedule() {
+        this.clearScheduledNodes(); 
+
         for (let i = 0; i < (this.bars + 1) * this.beats; i++) {
+            let time = this.startTime + i * this.notePeriod;
             if (i > (this.beats - 1)) {
-                this.metronomeBeatArray.push(this.startTime + i * this.notePeriod);
+                this.metronomeBeatArray.push(time);
             }
 
-            if (i % this.beats === 0) {
-                const highSource = this.audioContext.createBufferSource();
-                highSource.buffer = this.audioBufferHigh;
-                highSource.connect(this.audioContext.destination);
-                highSource.start(this.startTime + i * this.notePeriod);
+            let sourceNode = this.audioContext.createBufferSource();
+            if (i % (this.beats * this.bars) === 0) {
+                sourceNode.buffer = this.audioBufferHigh;
             } else {
-                const sourceNode = this.audioContext.createBufferSource();
                 sourceNode.buffer = this.audioBuffer;
-                sourceNode.connect(this.audioContext.destination);
-                sourceNode.start(this.startTime + i * this.notePeriod);
             }
+            sourceNode.connect(this.audioContext.destination);
+            sourceNode.start(time);
+            this.scheduledNodes.push(sourceNode);
         }
         this.stopTime = this.metronomeBeatArray[this.beats * this.bars - 1] + this.notePeriod;
+    }
+
+    clearScheduledNodes() {
+        this.scheduledNodes.forEach(node => node.stop());
+        this.scheduledNodes = [];
     }
 
     record() {
@@ -122,8 +140,8 @@ class RhythmTracker {
         }
 
         this.draw();
-        if (this.recording == true && this.audioContext.currentTime > this.stopTime) {
-            this.recording = false;
+        if (this.recording && this.audioContext.currentTime > this.stopTime) {
+            this.stopRecording(document.getElementById("rhythm-button"));
         }
     }
 
@@ -145,19 +163,32 @@ class RhythmTracker {
         const containerRect = this.canvas.parentElement.getBoundingClientRect();
         const offsetX = canvasRect.left - containerRect.left;
 
-        let scrollerX = (currentTime - startTime) * timeScale + offsetX - 20; 
-        const maxScrollerX = canvas.width + 100; 
+        let scrollerX = (currentTime - startTime) * timeScale + offsetX - 20;
+        const maxScrollerX = canvas.width + 100;
         if (scrollerX < 0) {
             scrollerX = 0;
         } else if (scrollerX > maxScrollerX) {
             scrollerX = maxScrollerX;
         }
-        this.scroller.style.left = `${scrollerX}px`;
+        if (this.recording) {
+            this.scroller.style.left = `${scrollerX}px`;
+        } else {
+            this.scroller.style.left = `${offsetX - 20}px`;
+        }
 
+        ctx.strokeStyle = 'red';
+        console.log("Recorded beats:", this.recordedBeatArray);
+        this.recordedBeatArray.forEach(beat => {
+            if (beat >= startTime && beat <= stopTime) {
+                const x = (beat - startTime - .1) * timeScale;
+                console.log("Drawing at x:", x);
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+        });
 
-
-
-        // Draw the regular ticks
         ctx.strokeStyle = 'black';
         for (let i = 0; i < this.beats * this.bars; i++) {
             let beat = this.metronomeBeatArray[i];
@@ -173,18 +204,5 @@ class RhythmTracker {
                 ctx.lineWidth = 2;
             }
         }
-
-        ctx.strokeStyle = 'red';
-        console.log("Recorded beats:", this.recordedBeatArray);
-        this.recordedBeatArray.forEach(beat => {
-            if (beat >= startTime && beat <= stopTime) {
-                const x = (beat - startTime - .1) * timeScale; // Added a slight left offset to compensate for delay on input
-                console.log("Drawing at x:", x);
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-        });
     }
-};
+}
