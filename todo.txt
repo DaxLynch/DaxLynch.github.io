@@ -1,32 +1,11 @@
-Main site stuff:
-so that only one can be used at a time, and if metronome is going 
-and you try to use tuner then it doesn't work, but maybe this is unneccesary
-4. Make all variables, classes, and functions follow the same naming scheme
-5. Put doc strings on everyfunction and class,
-6. Put headers on each file
+Todo:
 
+-Initialize audiocontext when tuner starts so you don't have to initialize it thru metronome/rhythmTracker
 
-1. Tuner:
+-Create animation for metronome (if time allows)
 
+-Create stop/restart buttons for rhythmtracker (if time allows)
 
+-Make input fields for metronome in dropdown menu (if time allows)
 
-Metronome:
-
-
-3. metronome Visualizer, we will call request animatonUpdate on some function, 
-and based on the time from this.lastNote and .currentTime, and bpm, and a static variable to keep track of wheteher its swinging left or right, we can show a simple metronome bar
-sweeping across the screen.
-
-Note the function must check if this.playing, and lol we could make it so there are two overlaid for the polyrhythms
-
-rhythmTracker:
-1. button for bpm entry
-2. needs sensitivity button
-
-
-Harry todo:
-
-pitch up first tick
-polyrthythm button
-be able to set bpm
-
+-ALL OF THE FUCKING DOCUMENTATION

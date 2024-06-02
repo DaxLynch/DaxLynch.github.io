@@ -87,7 +87,7 @@ class RhythmTracker {
                 this.metronomeBeatArray.push(this.startTime + i * this.notePeriod);
             }
 
-            if (i % (this.beats * this.bars) === 0) {
+            if (i % this.beats === 0) {
                 const highSource = this.audioContext.createBufferSource();
                 highSource.buffer = this.audioBufferHigh;
                 highSource.connect(this.audioContext.destination);
@@ -127,62 +127,64 @@ class RhythmTracker {
         }
     }
 
-draw() {
-    this.canvasCtx.fillStyle = "rgb(200 200 200)";
-    this.canvasCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    draw() {
+        this.canvasCtx.fillStyle = "rgb(200 200 200)";
+        this.canvasCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    this.canvasCtx.lineWidth = 2;
-    this.canvasCtx.strokeStyle = "rgb(0 0 0)";
+        this.canvasCtx.lineWidth = 2;
+        this.canvasCtx.strokeStyle = "rgb(0 0 0)";
 
-    const currentTime = this.audioContext.currentTime;
-    const startTime = this.metronomeBeatArray[0] - (1 * this.notePeriod);
-    const stopTime = this.stopTime;
-    const ctx = this.canvasCtx;
-    const canvas = this.canvas;
-    const timeScale = canvas.width / (stopTime - startTime);
+        const currentTime = this.audioContext.currentTime;
+        const startTime = this.metronomeBeatArray[0] - (1 * this.notePeriod);
+        const stopTime = this.stopTime;
+        const ctx = this.canvasCtx;
+        const canvas = this.canvas;
+        const timeScale = canvas.width / (stopTime - startTime);
 
-    const canvasRect = this.canvas.getBoundingClientRect();
-    const containerRect = this.canvas.parentElement.getBoundingClientRect();
-    const offsetX = canvasRect.left - containerRect.left;
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const containerRect = this.canvas.parentElement.getBoundingClientRect();
+        const offsetX = canvasRect.left - containerRect.left;
 
-    let scrollerX = (currentTime - startTime) * timeScale + offsetX - 20; 
-    const maxScrollerX = canvas.width + 100; 
-    if (scrollerX < 0) {
-        scrollerX = 0;
-    } else if (scrollerX > maxScrollerX) {
-        scrollerX = maxScrollerX;
-    }
-    this.scroller.style.left = `${scrollerX}px`;
+        let scrollerX = (currentTime - startTime) * timeScale + offsetX - 20; 
+        const maxScrollerX = canvas.width + 100; 
+        if (scrollerX < 0) {
+            scrollerX = 0;
+        } else if (scrollerX > maxScrollerX) {
+            scrollerX = maxScrollerX;
+        }
+        this.scroller.style.left = `${scrollerX}px`;
 
 
-    ctx.strokeStyle = 'red';
-    console.log("Recorded beats:", this.recordedBeatArray);
-    this.recordedBeatArray.forEach(beat => {
-        if (beat >= startTime && beat <= stopTime) {
-            const x = (beat - startTime - .1) * timeScale; // Added a slight left offset to compensate for delay on input
-            console.log("Drawing at x:", x);
+
+
+        // Draw the regular ticks
+        ctx.strokeStyle = 'black';
+        for (let i = 0; i < this.beats * this.bars; i++) {
+            let beat = this.metronomeBeatArray[i];
+            if ((i % this.beats) === 0) {
+                ctx.lineWidth = 4;
+            }
+            const x = (beat - startTime) * timeScale;
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, canvas.height);
             ctx.stroke();
+            if ((i % this.beats) === 0) {
+                ctx.lineWidth = 2;
+            }
         }
-    });
 
-    // Draw the regular ticks
-    ctx.strokeStyle = 'black';
-    for (let i = 0; i < this.beats * this.bars; i++) {
-        let beat = this.metronomeBeatArray[i];
-        if ((i % this.beats) === 0) {
-            ctx.lineWidth = 4;
-        }
-        const x = (beat - startTime) * timeScale;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-        if ((i % this.beats) === 0) {
-            ctx.lineWidth = 2;
-        }
+        ctx.strokeStyle = 'red';
+        console.log("Recorded beats:", this.recordedBeatArray);
+        this.recordedBeatArray.forEach(beat => {
+            if (beat >= startTime && beat <= stopTime) {
+                const x = (beat - startTime - .1) * timeScale; // Added a slight left offset to compensate for delay on input
+                console.log("Drawing at x:", x);
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+        });
     }
-}
 };
