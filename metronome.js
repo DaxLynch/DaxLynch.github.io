@@ -19,6 +19,16 @@ class Metronome {
         this.barContainer = document.getElementById('bar-container');
         this.polyBarContainer = document.getElementById('poly-bar-container');
         this.timeSignatureInput = document.getElementById('time-signature-input');
+
+
+        this.metCan = document.getElementById('metronome'); // Get the metronome div
+        this.metCanCtx = this.metCan.getContext('2d'); // Get the metronome canvas
+        this.metCanWid = this.metCan.width
+        this.metCanHei = this.metCan.height
+        this.metRad = 5
+
+        this.updateMetronomeDisplay = this.updateMetronomeDisplay.bind(this)
+
         this.bpmInput = document.getElementById('bpm-input'); // Get the BPM input element
         this.polyInput = null; 
         this.playButton = document.getElementById('play-button');
@@ -32,11 +42,16 @@ class Metronome {
         this.timeSignatureP = this.timeSignature * this.polyRatio;
         this.bpm = this.bpmInput.value; // Get the initial BPM value
 
+        this.oddNote = 0;
+
         this.audiosPerBeat = [0,0,0,0]; //keeps track of which audio is to be played
         this.audiosPerBeatP = Array(Math.ceil(this.timeSignatureP)).fill(1);  //keeps track of which audio is to be played, polyrhythm
 
         this.notePeriod = 60 / this.bpm; // Calculate the initial note period based on BPM
         this.notePeriodP = 60 / (this.bpm  * this.polyRatio); // Calculate the polyrhythms initial note period based on BPM
+
+
+        this.animationFrameId = requestAnimationFrame(this.updateMetronomeDisplay);
 
         this.timeSignatureInput.addEventListener('input', (event) => {
             this.timeSignature = parseInt(event.target.value);
@@ -150,6 +165,7 @@ class Metronome {
         sourceNode.connect(this.audioContext.destination);
         sourceNode.start(this.lastNote + this.notePeriod);
         this.lastNote += this.notePeriod;
+        this.oddNote = (this.oddNote + 1) % 2;
         this.currentBeat++;
     }
 
@@ -170,6 +186,7 @@ class Metronome {
             sourceNode.connect(this.audioContext.destination);
             sourceNode.start(this.lastNote + this.notePeriod);
             this.lastNote += this.notePeriod;
+            this.oddNote = (this.oddNote + 1) % 2;
             this.currentBeat++;
         }
     
@@ -308,4 +325,28 @@ class Metronome {
         }
         console.log(`Selected sound ${selectedSound} for beat ${beatIndex} for the ${track} track`);
     }
+
+    updateMetronomeDisplay(){
+        let x = this.metCanWid/2;
+        const y = this.metCanHei/2;
+        this.metCanCtx.clearRect(0, 0, this.metCanWid, this.metCanHei);
+        if (this.playing){
+            let time = this.audioContext.currentTime - this.lastNote; //Time elapsed
+            if (time < 0){ //This implies we are in the period when it was just assigned;
+                time = this.notePeriod + time;
+            }
+            if (this.oddNote == 1){
+                time = -1 * time
+            }
+
+            x =  (0.5 *  Math.sin(time * Math.PI / this.notePeriod)) * this.metCanWid * .5 + this.metCanWid * .5
+        }
+        this.metCanCtx.beginPath();
+        this.metCanCtx.arc(x, y, this.metRad, 0, Math.PI * 2);
+        this.metCanCtx.fill();
+        this.metCanCtx.closePath();
+
+
+        this.animationFrameId = requestAnimationFrame(this.updateMetronomeDisplay);
+    } 
 }
