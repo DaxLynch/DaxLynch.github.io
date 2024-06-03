@@ -29,7 +29,7 @@ To run this, use Pythons builtin http server, run:
 And then in your browser you MUST go to http://localhost:8880/
 
 
-# Instillation #
+# Installation #
 
 
 Please complete the steps found in [Instillation.md] Once you have installed the requirements and set up a local server. You are ready to launch the program.
