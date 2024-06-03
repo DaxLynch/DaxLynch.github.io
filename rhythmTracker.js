@@ -110,7 +110,7 @@ class RhythmTracker {
             }
 
             let sourceNode = this.audioContext.createBufferSource();
-            if (i % (this.beats * this.bars) === 0) {
+            if (i % this.beats === 0) {
                 sourceNode.buffer = this.audioBufferHigh;
             } else {
                 sourceNode.buffer = this.audioBuffer;
