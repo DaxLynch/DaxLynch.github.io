@@ -180,6 +180,10 @@ class MetronomeAnimation {
             this.speed = this.speed;
         }
     }
+
+    changeSpeed(speed) {
+        this.speed = speed;
+    }
 }
 
 // animation = new MetronomeAnimation('canvas', 'speed', 'radius', 'archeight');

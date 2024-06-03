@@ -258,7 +258,7 @@ class Metronome {
             } else {
                 this.audiosPerBeat = Array(beatsPerBar).fill(0);
                 this.barContainer.innerHTML = '';
-                for (let i = 0; i < beatsPerBar; i++) {
+                for (let i = 0; i < beatsPerBar; i++) {                     // Look at this to change image color when selected
                     const beatContainer = document.createElement('div');
                     beatContainer.classList.add('beat-container'); // Create a container
 
