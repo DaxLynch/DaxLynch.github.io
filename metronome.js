@@ -1,3 +1,6 @@
+// metronome.js is in charge of scheduling the metronome and polyrhytms, and handling the visualizer
+// Authors: Miles Anderson, Ryan Helms, Dax Lynch, and Harry Robertson
+// Last Edited: 6/3/24
 class Metronome {
     constructor(audioContext) {
         this.audioContext = audioContext;
@@ -82,7 +85,7 @@ class Metronome {
         this.intervalId = setInterval(() => this.scheduler(), 100);
     }
 
-    onOff() { // Allows the play button to operate as a toggle
+    onOff() { // Toggles the Metronome On/Off
         const currentValue = this.playButton.value;
         if (currentValue === "On") {
             this.playButton.value = "Off";
@@ -103,7 +106,7 @@ class Metronome {
         }
     }
 
-    polyOnOff() { // Allows the poly button to operate as a toggle
+    polyOnOff() { // Toggles PolyRhythm On/Off
         const currentValue = this.polyButton.value;
         if (currentValue === "On") {
             this.polyButton.innerText = "+Polyrhythm";
@@ -155,6 +158,7 @@ class Metronome {
     }
 
     playNote() {
+        // Plays the note determined from beat index
         const beatIndex = this.currentBeat % this.timeSignature;
         const sourceNode = this.audioContext.createBufferSource();
         if (beatIndex === 0) { // First note of a bar
@@ -170,6 +174,8 @@ class Metronome {
     }
 
     playNotePoly() {
+        // Plays the note determined by the PolyRhythm Index
+
         const beatIndex = this.currentBeat % this.timeSignature;
         const beatIndexP = this.currentBeatP % Math.ceil(this.timeSignatureP);
     
@@ -219,6 +225,7 @@ class Metronome {
     }
 
     noteToBePlayed() {
+        // Determines next note
         if (this.polyrhythmActive === false) {
             return this.lastNote + this.notePeriod < this.audioContext.currentTime + this.evalPeriod;
         } else {
@@ -231,7 +238,6 @@ class Metronome {
         this.playButton.addEventListener('click', this.onOff);
         this.polyButton.addEventListener('click', this.polyOnOff);
 
-        // Load the audio files
         for (let i = 0; i < this.audioFiles.length; i++) { // initializes the audio files from array
             const response = await fetch(this.audioFiles[i]);
             const arrayBuffer = await response.arrayBuffer();
@@ -311,6 +317,7 @@ class Metronome {
     }
 
     handleSoundSelection(event) {
+        // Determines which sound the user has chosen for the metronome
         const selectedSound = parseInt(event.target.dataset.sound);
         const beatIndex = Array.from(event.target.parentNode.parentNode.children).indexOf(event.target.parentNode);
         const track = event.target.dataset.track;
@@ -318,6 +325,7 @@ class Metronome {
     }
 
     updateMetronomeSound(selectedSound, beatIndex, track) {
+        // Ipdates sound after chosen
         if (track === "standard") {
             this.audiosPerBeat[beatIndex] = selectedSound;
         } else {
@@ -327,6 +335,7 @@ class Metronome {
     }
 
     updateMetronomeDisplay(){
+        // Updates the metronome visualizer
         let x = this.metCanWid/2;
         const y = this.metCanHei/2;
         this.metCanCtx.clearRect(0, 0, this.metCanWid, this.metCanHei);

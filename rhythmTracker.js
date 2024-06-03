@@ -1,3 +1,6 @@
+// rhythmTracker.js is in charge of scheduling the metronome, and taking in input audio from the user, and providing visual feedback to their accuracy
+// Authors: Miles Anderson, Ryan Helms, Dax Lynch, and Harry Robertson
+// Last Edited: 6/2/24
 class RhythmTracker {
     constructor(audioContext) {
         // Canvas variables and functions
@@ -53,6 +56,7 @@ class RhythmTracker {
     }
 
     async initialize() {
+        // This function sets up the audio for the metrenome in the Ryhtm Tracker
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
                 const source = this.audioContext.createMediaStreamSource(stream);
@@ -79,6 +83,7 @@ class RhythmTracker {
     }
 
     startRecording(button) {
+        // This function has a reference to the "Start" button, it determines bpm and schedules the beats accordingly once pressed
         const bpmInput = document.getElementById("rt-bpm-input");
         const newBPM = parseInt(bpmInput.value);
         if (newBPM > 0 && newBPM <= 250) {
@@ -95,12 +100,14 @@ class RhythmTracker {
     }
 
     stopRecording(button) {
+        // This function stops recording
         this.recording = false;
         button.textContent = "Start";
         this.clearScheduledNodes();
     }
 
     schedule() {
+        // Determines the order of beats by BPM and number of bars, creates audio buffer source for each beat
         this.clearScheduledNodes();
 
         for (let i = 0; i < (this.bars + 1) * this.beats; i++) {
@@ -123,11 +130,13 @@ class RhythmTracker {
     }
 
     clearScheduledNodes() {
+        // Clears the scheduled notes
         this.scheduledNodes.forEach(node => node.stop());
         this.scheduledNodes = [];
     }
 
     record() {
+        // Records beats from input source, calls draw() to mark location on canvas
         requestAnimationFrame(this.record);
         if (this.recording && (this.audioContext.currentTime < this.stopTime) && (this.audioContext.currentTime > this.metronomeBeatArray[0])) {
             this.analyser.getByteFrequencyData(this.dataArray);
@@ -153,6 +162,7 @@ class RhythmTracker {
     }
 
     draw() {
+        // Draws a red line on the canvas
         this.canvasCtx.fillStyle = "rgb(200 200 200)";
         this.canvasCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 

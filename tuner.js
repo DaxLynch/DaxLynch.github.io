@@ -1,4 +1,8 @@
-class Tuner { // 
+// tuner.js is in charge of breaking down the users audio signal and returning it to them to help accuractley tune their instrument
+// Authors: Miles Anderson, Ryan Helms, Dax Lynch, and Harry Robertson
+// Last Edited: 4/3/24
+
+class Tuner {
     constructor(audioContext, pitchDisplayId) {
         this.audioContext = audioContext;
         this.pitchDisplay = document.getElementById(pitchDisplayId);
@@ -12,6 +16,7 @@ class Tuner { //
     }
 
     initialize() {
+        // Sets up the tuner class, and enables the "Start" button by initalizing an EventListener
         const toggleButton = document.getElementById('toggle-tuner');
         toggleButton.addEventListener('click', () => {
             if (this.isRunning) {
@@ -25,6 +30,7 @@ class Tuner { //
     }
 
     startTuner() {
+        // Starts the tuner and begins analyzing the audio input
         if (this.isRunning) return;
         this.isRunning = true;
 
@@ -50,6 +56,7 @@ class Tuner { //
     }
 
     stopTuner() {
+        // Stops the tuner and sets it to an off state
         if (!this.isRunning) return;
         this.isRunning = false;
 
@@ -66,6 +73,7 @@ class Tuner { //
 
 
     pitchClassAndCents(pitch) {
+        // Converts the pitch input freq to a specific note and distance from note
         if (pitch === 0) { return ["--", 0]; }
         let pitchInOctave0 = pitch;
         while (pitchInOctave0 > 55.0) {
@@ -89,6 +97,7 @@ class Tuner { //
     }
 
     updatePitchDisplay = () => {
+        // Constant running function that uses pitchClassAndCents(pitch) to get the frequency then display it to the user
         if (!this.isRunning) return;
 
         this.analyser.getByteFrequencyData(this.dataArray);
