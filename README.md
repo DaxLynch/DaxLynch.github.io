@@ -11,7 +11,7 @@ The MetroGnome project is a web-based application aimed at combining a tuner, me
 
 
 - Miles Anderson
-- Ryham Helms
+- Ryan Helms
 - Dax Lynch
 - Harry Robertson
 
@@ -32,7 +32,7 @@ And then in your browser you MUST go to http://localhost:8880/
 # Installation #
 
 
-Please complete the steps found in [Instillation.md] Once you have installed the requirements and set up a local server. You are ready to launch the program.
+Please complete the steps found in [Installation.md] Once you have installed the requirements and set up a local server. You are ready to launch the program.
 
 
 # Dependencies #
@@ -41,7 +41,7 @@ Please complete the steps found in [Instillation.md] Once you have installed the
 The code runs on Python 3.12, as it's built in http server functionality allowed for ease of testing and desgin when we were desgining our system.
 
 
-As our system sends and recieves audio, an audioContext object is initalizied upon loading up the webapp to give the user the ability to input sound sources. This is a built in part of JavaScripts WebAudio API
+As our system sends and recieves audio, an audioContext object is initalizied upon loading up the web app to give the user the ability to input sound sources. This is a built in part of JavaScripts WebAudio API
 
 
 No external libraries are used, everything is built into JS, CSS and HTML.
@@ -64,7 +64,7 @@ The Metronome class generates metronome beats based on user-defined tempo and ti
 
 
 
-Each of these is a seperate JavaScript file, which are all initalized in [script.js], [main.html] and [styles.css] handle the user interface.
+Each of these is a seperate JavaScript file, which are all initalized in [script.js], [index.html] and [styles.css] handle the user interface.
 
 
 
