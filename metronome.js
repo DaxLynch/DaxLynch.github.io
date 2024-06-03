@@ -71,13 +71,13 @@ class Metronome {
         const currentValue = this.playButton.value;
         if (currentValue === "On") {
             this.playButton.value = "Off";
-            console.log("Turned off"); // Add code to stop the metronome if it's playing
+   //         console.log("Turned off"); // Add code to stop the metronome if it's playing
             this.playing = false;
             this.lastNote = 0;
             this.lastNoteP = 0;
         } else {
             this.playButton.value = "On"; 
-            console.log("Turned on");
+     //       console.log("Turned on");
             this.playing = true;
             this.lastNote = this.audioContext.currentTime - this.notePeriod + 0.001;
             if (this.polyrhythmActive) {

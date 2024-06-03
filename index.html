@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instrument Tuner</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="preload" as="image" href="assets/chime.png">
+    <link rel="preload" as="image" href="assets/cowbell.png">
+    <link rel="preload" as="image" href="assets/cymbal.png"> 
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="bg bg2"></div>
+    <div class="bg bg3"></div>
+    
+    <div class="content">
+        <div class="horizontal-container">
+            <div class="container">
+                <h1>Instrument Tuner</h1>
+                <div id="pitch-display">--</div>
+                <div id="cents-display">-</div>
+                <div class="pendulum-container">
+                    <div id="pendulum"></div>
+                </div>
+                <button id="toggle-tuner">Start Tuning</button>
+            </div>
+            <div class="container">
+                <h2>Metronome</h2>
+                <div id="metronome-interface">
+                    <div id="time-signature-container">
+                        <label for="time-signature-input">Time Signature:</label>
+                        <input type="number" id="time-signature-input" min="2" value="4">
+                    </div>
+                    <div id="bpm-container">
+                        <label for="bpm-input">BPM:</label>
+                        <input type="number" id="bpm-input" min="1" value="120">
+                        
+                    </div>
+                    <div id="bars-container">
+                        <div id="bar-container"></div>
+                        <div id="poly-bar-container"></div>
+                    </div>
+                    <div id="sound-selector-container"></div>
+                    <button id="play-button">Play</button>
+                    <button id="poly-button">+Polyrhythm</button>
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <h1>Rhythm Tracker</h1>
+            <div id="rhythm-display-container">
+                <canvas id="rhythm-display" width="200" height="200"></canvas>
+                <img id="scrolling-triangle" src="assets/small-triangle-down.png" alt="Scrolling Triangle">
+            </div>
+            <div id="bpm-input-container">
+                <label for="bpm-input">BPM:</label>
+                <input type="number" id="rt-bpm-input" min="1" max="250" value="120">
+            </div>
+            <button id="rhythm-button">Play</button>
+        </div>
+    </div>
+    <script src="tuner.js"></script>
+    <script src="rhythmTracker.js"></script>
+    <script src="metronome.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
