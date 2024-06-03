@@ -201,11 +201,11 @@ class RhythmTracker {
         }
 
         ctx.strokeStyle = 'red';
-        console.log("Recorded beats:", this.recordedBeatArray);
+        //console.log("Recorded beats:", this.recordedBeatArray);
         this.recordedBeatArray.forEach(beat => {
             if (beat >= startTime && beat <= stopTime) {
                 const x = (beat - startTime - .1) * timeScale;
-                console.log("Drawing at x:", x);
+          //      console.log("Drawing at x:", x);
                 ctx.beginPath();
                 ctx.moveTo(x, 0);
                 ctx.lineTo(x, canvas.height);
