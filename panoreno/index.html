@@ -28,6 +28,21 @@
       height: 100vh;
     }
 
+    #draw-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      touch-action: none;
+    }
+
+    body.is-drawing #draw-layer {
+      cursor: crosshair;
+      pointer-events: auto;
+    }
+
     .viewer-header {
       position: fixed;
       top: 16px;
@@ -93,6 +108,98 @@
       bottom: 18px;
     }
 
+    .annotation-panel {
+      position: fixed;
+      left: 16px;
+      bottom: 18px;
+      z-index: 6;
+      width: min(390px, calc(100vw - 32px));
+      padding: 12px;
+      border: 1px solid rgb(255 255 255 / 18%);
+      border-radius: 8px;
+      color: white;
+      background: rgb(0 0 0 / 68%);
+      box-shadow: 0 18px 50px rgb(0 0 0 / 38%);
+      backdrop-filter: blur(14px);
+    }
+
+    .annotation-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .annotation-actions button,
+    .export-link {
+      min-height: 34px;
+      border: 1px solid rgb(255 255 255 / 20%);
+      border-radius: 6px;
+      padding: 0 12px;
+      color: white;
+      background: rgb(255 255 255 / 10%);
+      font: inherit;
+      font-size: 0.84rem;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .annotation-actions button:disabled,
+    .export-link[aria-disabled="true"] {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .annotation-actions button[data-active="true"] {
+      color: #111;
+      background: #f4f1e8;
+    }
+
+    .annotation-panel textarea {
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 76px;
+      resize: vertical;
+      border: 1px solid rgb(255 255 255 / 18%);
+      border-radius: 6px;
+      padding: 9px 10px;
+      color: white;
+      background: rgb(255 255 255 / 9%);
+      font: inherit;
+      font-size: 0.86rem;
+    }
+
+    .annotation-readout {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+      color: rgb(255 255 255 / 70%);
+      font-size: 0.74rem;
+    }
+
+    .annotation-readout strong {
+      display: block;
+      margin-top: 2px;
+      color: #f4f1e8;
+      font-size: 0.85rem;
+    }
+
+    .coordinate-output {
+      box-sizing: border-box;
+      width: 100%;
+      max-height: 92px;
+      margin-top: 10px;
+      overflow: auto;
+      border: 1px solid rgb(255 255 255 / 12%);
+      border-radius: 6px;
+      padding: 8px;
+      color: rgb(255 255 255 / 72%);
+      background: rgb(0 0 0 / 32%);
+      font: 0.72rem ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
     @media (max-width: 680px) {
       .viewer-header {
         align-items: flex-start;
@@ -111,11 +218,19 @@
         flex: 1;
         min-width: 0;
       }
+
+      .annotation-panel {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        width: auto;
+      }
     }
   </style>
 </head>
 <body>
   <main id="panorama" aria-label="Panoramic renovation viewer"></main>
+  <canvas id="draw-layer" aria-label="Outline drawing layer"></canvas>
 
   <header class="viewer-header">
     <div class="brand">
@@ -128,6 +243,35 @@
       <button type="button" data-panorama="remodeled" aria-pressed="true">Remodeled</button>
     </nav>
   </header>
+
+  <aside class="annotation-panel" aria-label="Panorama annotation tools">
+    <div class="annotation-actions">
+      <button type="button" id="draw-toggle">Draw Outline</button>
+      <button type="button" id="close-outline" disabled>Close</button>
+      <button type="button" id="clear-outline" disabled>Clear</button>
+      <button type="button" id="export-crop" disabled>Export Crop</button>
+      <a class="export-link" id="download-crop" aria-disabled="true">Download</a>
+    </div>
+
+    <textarea id="region-prompt" placeholder="Describe the change for this outlined area"></textarea>
+
+    <div class="annotation-readout">
+      <div>
+        Points
+        <strong id="point-count">0</strong>
+      </div>
+      <div>
+        View yaw
+        <strong id="view-yaw">0.0</strong>
+      </div>
+      <div>
+        View pitch
+        <strong id="view-pitch">0.0</strong>
+      </div>
+    </div>
+
+    <pre class="coordinate-output" id="coordinate-output">[]</pre>
+  </aside>
 
   <script>
     const panoramas = {
@@ -148,6 +292,201 @@
     };
 
     let viewer;
+    let isDrawing = false;
+    let isClosed = false;
+    let points = [];
+
+    const drawCanvas = document.querySelector("#draw-layer");
+    const drawContext = drawCanvas.getContext("2d");
+    const drawToggle = document.querySelector("#draw-toggle");
+    const closeOutline = document.querySelector("#close-outline");
+    const clearOutline = document.querySelector("#clear-outline");
+    const exportCrop = document.querySelector("#export-crop");
+    const downloadCrop = document.querySelector("#download-crop");
+    const pointCount = document.querySelector("#point-count");
+    const viewYaw = document.querySelector("#view-yaw");
+    const viewPitch = document.querySelector("#view-pitch");
+    const coordinateOutput = document.querySelector("#coordinate-output");
+
+    function resizeDrawCanvas() {
+      const scale = window.devicePixelRatio || 1;
+      drawCanvas.width = Math.round(window.innerWidth * scale);
+      drawCanvas.height = Math.round(window.innerHeight * scale);
+      drawContext.setTransform(scale, 0, 0, scale, 0, 0);
+      renderOutline();
+    }
+
+    function updateAnnotationUi() {
+      pointCount.textContent = points.length;
+      closeOutline.disabled = points.length < 3 || isClosed;
+      clearOutline.disabled = points.length === 0;
+      exportCrop.disabled = !isClosed;
+      drawToggle.dataset.active = String(isDrawing);
+      drawToggle.textContent = isDrawing ? "Stop Drawing" : "Draw Outline";
+
+      if (viewer) {
+        viewYaw.textContent = viewer.getYaw().toFixed(1);
+        viewPitch.textContent = viewer.getPitch().toFixed(1);
+      }
+
+      coordinateOutput.textContent = JSON.stringify(points.map((point) => ({
+        x: Math.round(point.x),
+        y: Math.round(point.y),
+        pitch: Number(point.pitch.toFixed(3)),
+        yaw: Number(point.yaw.toFixed(3))
+      })), null, 2);
+    }
+
+    function renderOutline() {
+      drawContext.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      if (points.length === 0) {
+        updateAnnotationUi();
+        return;
+      }
+
+      drawContext.lineWidth = 3;
+      drawContext.strokeStyle = "#f4f1e8";
+      drawContext.fillStyle = "rgb(244 241 232 / 18%)";
+      drawContext.beginPath();
+      drawContext.moveTo(points[0].x, points[0].y);
+
+      points.slice(1).forEach((point) => {
+        drawContext.lineTo(point.x, point.y);
+      });
+
+      if (isClosed) {
+        drawContext.closePath();
+        drawContext.fill();
+      }
+
+      drawContext.stroke();
+
+      points.forEach((point) => {
+        drawContext.beginPath();
+        drawContext.arc(point.x, point.y, 5, 0, Math.PI * 2);
+        drawContext.fillStyle = "#f4f1e8";
+        drawContext.fill();
+        drawContext.strokeStyle = "#111";
+        drawContext.lineWidth = 1.5;
+        drawContext.stroke();
+      });
+
+      updateAnnotationUi();
+    }
+
+    function clearAnnotation() {
+      points = [];
+      isClosed = false;
+      downloadCrop.removeAttribute("href");
+      downloadCrop.removeAttribute("download");
+      downloadCrop.setAttribute("aria-disabled", "true");
+      renderOutline();
+    }
+
+    function setDrawing(nextValue) {
+      isDrawing = nextValue;
+      document.body.classList.toggle("is-drawing", isDrawing);
+
+      if (viewer) {
+        if (typeof viewer.setMouseZoom === "function") {
+          viewer.setMouseZoom(!isDrawing);
+        }
+
+        if (typeof viewer.setKeyboardZoom === "function") {
+          viewer.setKeyboardZoom(!isDrawing);
+        }
+
+        if (typeof viewer.setDraggable === "function") {
+          viewer.setDraggable(!isDrawing);
+        }
+      }
+
+      updateAnnotationUi();
+    }
+
+    function getCanvasPoint(event) {
+      const rect = drawCanvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const coords = viewer && typeof viewer.mouseEventToCoords === "function"
+        ? viewer.mouseEventToCoords(event)
+        : [viewer ? viewer.getPitch() : 0, viewer ? viewer.getYaw() : 0];
+
+      return {
+        x,
+        y,
+        pitch: coords[0],
+        yaw: coords[1]
+      };
+    }
+
+    function getBoundingBox() {
+      const xs = points.map((point) => point.x);
+      const ys = points.map((point) => point.y);
+      const padding = 24;
+
+      return {
+        left: Math.max(0, Math.floor(Math.min(...xs) - padding)),
+        top: Math.max(0, Math.floor(Math.min(...ys) - padding)),
+        right: Math.min(window.innerWidth, Math.ceil(Math.max(...xs) + padding)),
+        bottom: Math.min(window.innerHeight, Math.ceil(Math.max(...ys) + padding))
+      };
+    }
+
+    function getPannellumCanvas() {
+      return document.querySelector("#panorama canvas");
+    }
+
+    function exportOutlinedCrop() {
+      const sourceCanvas = getPannellumCanvas();
+
+      if (!sourceCanvas || !isClosed) {
+        return;
+      }
+
+      const scaleX = sourceCanvas.width / window.innerWidth;
+      const scaleY = sourceCanvas.height / window.innerHeight;
+      const box = getBoundingBox();
+      const width = box.right - box.left;
+      const height = box.bottom - box.top;
+      const output = document.createElement("canvas");
+      const outputContext = output.getContext("2d");
+
+      output.width = Math.round(width * scaleX);
+      output.height = Math.round(height * scaleY);
+      outputContext.drawImage(
+        sourceCanvas,
+        Math.round(box.left * scaleX),
+        Math.round(box.top * scaleY),
+        output.width,
+        output.height,
+        0,
+        0,
+        output.width,
+        output.height
+      );
+
+      outputContext.save();
+      outputContext.scale(scaleX, scaleY);
+      outputContext.translate(-box.left, -box.top);
+      outputContext.lineWidth = 4;
+      outputContext.strokeStyle = "#ffeb3b";
+      outputContext.fillStyle = "rgb(255 235 59 / 16%)";
+      outputContext.beginPath();
+      outputContext.moveTo(points[0].x, points[0].y);
+      points.slice(1).forEach((point) => outputContext.lineTo(point.x, point.y));
+      outputContext.closePath();
+      outputContext.fill();
+      outputContext.stroke();
+      outputContext.restore();
+
+      const url = output.toDataURL("image/png");
+      downloadCrop.href = url;
+      downloadCrop.download = `panoreno-crop-${Date.now()}.png`;
+      downloadCrop.removeAttribute("aria-disabled");
+      downloadCrop.click();
+    }
 
     function loadPanorama(key) {
       const scene = panoramas[key];
@@ -173,12 +512,37 @@
       document.querySelectorAll("[data-panorama]").forEach((button) => {
         button.setAttribute("aria-pressed", String(button.dataset.panorama === key));
       });
+
+      clearAnnotation();
+      setDrawing(false);
     }
 
     document.querySelectorAll("[data-panorama]").forEach((button) => {
       button.addEventListener("click", () => loadPanorama(button.dataset.panorama));
     });
 
+    drawCanvas.addEventListener("pointerdown", (event) => {
+      if (!isDrawing || isClosed) {
+        return;
+      }
+
+      event.preventDefault();
+      points.push(getCanvasPoint(event));
+      renderOutline();
+    });
+
+    drawToggle.addEventListener("click", () => setDrawing(!isDrawing));
+    closeOutline.addEventListener("click", () => {
+      isClosed = points.length >= 3;
+      setDrawing(false);
+      renderOutline();
+    });
+    clearOutline.addEventListener("click", clearAnnotation);
+    exportCrop.addEventListener("click", exportOutlinedCrop);
+    window.addEventListener("resize", resizeDrawCanvas);
+    window.setInterval(updateAnnotationUi, 300);
+
+    resizeDrawCanvas();
     loadPanorama("remodeled");
   </script>
 </body>
