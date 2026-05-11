@@ -93,77 +93,6 @@
       bottom: 18px;
     }
 
-    .calibration-panel {
-      position: fixed;
-      right: 16px;
-      bottom: 18px;
-      z-index: 6;
-      width: min(360px, calc(100vw - 32px));
-      padding: 14px;
-      border: 1px solid rgb(255 255 255 / 18%);
-      border-radius: 8px;
-      color: white;
-      background: rgb(0 0 0 / 68%);
-      box-shadow: 0 18px 50px rgb(0 0 0 / 38%);
-      backdrop-filter: blur(14px);
-    }
-
-    .calibration-panel h2 {
-      margin: 0 0 12px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      letter-spacing: 0;
-    }
-
-    .field-control {
-      display: grid;
-      grid-template-columns: 92px 1fr 54px;
-      align-items: center;
-      gap: 10px;
-      margin: 10px 0;
-      font-size: 0.82rem;
-    }
-
-    .field-control label,
-    .field-control output {
-      color: rgb(255 255 255 / 82%);
-    }
-
-    .field-control input {
-      width: 100%;
-      accent-color: #f4f1e8;
-    }
-
-    .derived-values {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid rgb(255 255 255 / 14%);
-    }
-
-    .derived-values div {
-      min-width: 0;
-    }
-
-    .derived-values span,
-    .derived-values strong {
-      display: block;
-    }
-
-    .derived-values span {
-      color: rgb(255 255 255 / 58%);
-      font-size: 0.72rem;
-    }
-
-    .derived-values strong {
-      margin-top: 3px;
-      color: #f4f1e8;
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
-
     @media (max-width: 680px) {
       .viewer-header {
         align-items: flex-start;
@@ -181,17 +110,6 @@
       .image-switcher button {
         flex: 1;
         min-width: 0;
-      }
-
-      .calibration-panel {
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
-        width: auto;
-      }
-
-      .field-control {
-        grid-template-columns: 84px 1fr 48px;
       }
     }
   </style>
@@ -211,114 +129,28 @@
     </nav>
   </header>
 
-  <aside class="calibration-panel" aria-label="Panorama field of view calibration">
-    <h2>Field of View Calibration</h2>
-
-    <div class="field-control">
-      <label for="top-field">Top FOV</label>
-      <input id="top-field" type="range" min="1" max="120" step="1" value="42">
-      <output id="top-field-value" for="top-field">42°</output>
-    </div>
-
-    <div class="field-control">
-      <label for="bottom-field">Bottom FOV</label>
-      <input id="bottom-field" type="range" min="1" max="120" step="1" value="53">
-      <output id="bottom-field-value" for="bottom-field">53°</output>
-    </div>
-
-    <div class="field-control">
-      <label for="radial-field">Radial FOV</label>
-      <input id="radial-field" type="range" min="90" max="360" step="1" value="290">
-      <output id="radial-field-value" for="radial-field">290°</output>
-    </div>
-
-    <div class="derived-values" aria-label="Pannellum values">
-      <div>
-        <span>haov</span>
-        <strong id="haov-value">290</strong>
-      </div>
-      <div>
-        <span>vaov</span>
-        <strong id="vaov-value">95</strong>
-      </div>
-      <div>
-        <span>vOffset</span>
-        <strong id="v-offset-value">-5.5</strong>
-      </div>
-    </div>
-  </aside>
-
   <script>
-    const fieldControls = {
-      top: document.querySelector("#top-field"),
-      bottom: document.querySelector("#bottom-field"),
-      radial: document.querySelector("#radial-field")
-    };
-
-    const fieldOutputs = {
-      top: document.querySelector("#top-field-value"),
-      bottom: document.querySelector("#bottom-field-value"),
-      radial: document.querySelector("#radial-field-value"),
-      haov: document.querySelector("#haov-value"),
-      vaov: document.querySelector("#vaov-value"),
-      vOffset: document.querySelector("#v-offset-value")
-    };
-
     const panoramas = {
       original: {
         label: "Original",
         src: "assets/original.jpeg",
-        top: 42,
-        bottom: 53,
-        radial: 290
+        haov: 290,
+        vaov: 95,
+        vOffset: -5.5
       },
       remodeled: {
         label: "Remodeled",
         src: "assets/remodeled.png",
-        top: 42,
-        bottom: 53,
-        radial: 290
+        haov: 290,
+        vaov: 95,
+        vOffset: -5.5
       }
     };
 
     let viewer;
-    let currentPanorama = "remodeled";
-
-    function getCalibration() {
-      const top = Number(fieldControls.top.value);
-      const bottom = Number(fieldControls.bottom.value);
-      const radial = Number(fieldControls.radial.value);
-
-      return {
-        top,
-        bottom,
-        haov: radial,
-        vaov: top + bottom,
-        vOffset: (top - bottom) / 2
-      };
-    }
-
-    function updateCalibrationDisplay(values) {
-      fieldOutputs.top.value = `${values.top}°`;
-      fieldOutputs.bottom.value = `${values.bottom}°`;
-      fieldOutputs.radial.value = `${values.haov}°`;
-      fieldOutputs.haov.textContent = values.haov.toFixed(0);
-      fieldOutputs.vaov.textContent = values.vaov.toFixed(0);
-      fieldOutputs.vOffset.textContent = values.vOffset.toFixed(1);
-    }
-
-    function applyCalibrationToControls(scene) {
-      fieldControls.top.value = scene.top;
-      fieldControls.bottom.value = scene.bottom;
-      fieldControls.radial.value = scene.radial;
-    }
 
     function loadPanorama(key) {
       const scene = panoramas[key];
-      currentPanorama = key;
-      applyCalibrationToControls(scene);
-      const calibration = getCalibration();
-      updateCalibrationDisplay(calibration);
 
       if (viewer) {
         viewer.destroy();
@@ -330,9 +162,9 @@
         autoLoad: true,
         showControls: true,
         backgroundColor: [0, 0, 0],
-        haov: calibration.haov,
-        vaov: calibration.vaov,
-        vOffset: calibration.vOffset,
+        haov: scene.haov,
+        vaov: scene.vaov,
+        vOffset: scene.vOffset,
         pitch: 0,
         yaw: 0,
         hfov: 100
@@ -343,24 +175,8 @@
       });
     }
 
-    function updateCurrentPanorama() {
-      const calibration = getCalibration();
-      const scene = panoramas[currentPanorama];
-
-      scene.top = calibration.top;
-      scene.bottom = calibration.bottom;
-      scene.radial = calibration.haov;
-      updateCalibrationDisplay(calibration);
-
-      loadPanorama(currentPanorama);
-    }
-
     document.querySelectorAll("[data-panorama]").forEach((button) => {
       button.addEventListener("click", () => loadPanorama(button.dataset.panorama));
-    });
-
-    Object.values(fieldControls).forEach((control) => {
-      control.addEventListener("input", updateCurrentPanorama);
     });
 
     loadPanorama("remodeled");
