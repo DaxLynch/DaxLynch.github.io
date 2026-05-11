@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panoreno | Panoramic Renovations</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+  <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #050505;
+      overflow: hidden;
+    }
+
+    #panorama {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .viewer-header {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .brand {
+      max-width: min(420px, 52vw);
+      color: white;
+      text-shadow: 0 2px 14px rgb(0 0 0 / 72%);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.25rem, 2.8vw, 2.35rem);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 6px 0 0;
+      color: rgb(255 255 255 / 76%);
+      font-size: clamp(0.78rem, 1.4vw, 0.95rem);
+      line-height: 1.35;
+    }
+
+    .image-switcher {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid rgb(255 255 255 / 20%);
+      border-radius: 8px;
+      background: rgb(0 0 0 / 58%);
+      backdrop-filter: blur(14px);
+      pointer-events: auto;
+    }
+
+    .image-switcher button {
+      min-width: 96px;
+      height: 34px;
+      border: 0;
+      border-radius: 5px;
+      color: rgb(255 255 255 / 78%);
+      background: transparent;
+      font: inherit;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+
+    .image-switcher button[aria-pressed="true"] {
+      color: #111;
+      background: #f4f1e8;
+    }
+
+    .pnlm-controls-container {
+      bottom: 18px;
+    }
+
+    @media (max-width: 680px) {
+      .viewer-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .brand {
+        max-width: 100%;
+      }
+
+      .image-switcher {
+        width: calc(100vw - 40px);
+      }
+
+      .image-switcher button {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="panorama" aria-label="Panoramic renovation viewer"></main>
+
+  <header class="viewer-header">
+    <div class="brand">
+      <h1>Panoreno</h1>
+      <p>Panoramic renovations before and after.</p>
+    </div>
+
+    <nav class="image-switcher" aria-label="Panorama image">
+      <button type="button" data-panorama="original" aria-pressed="false">Original</button>
+      <button type="button" data-panorama="remodeled" aria-pressed="true">Remodeled</button>
+    </nav>
+  </header>
+
+  <script>
+    const panoramas = {
+      original: {
+        label: "Original",
+        src: "assets/original.jpeg",
+        haov: 355,
+        vaov: 95,
+        vOffset: -5
+      },
+      remodeled: {
+        label: "Remodeled",
+        src: "assets/remodeled.jpeg",
+        haov: 355,
+        vaov: 95,
+        vOffset: -5
+      }
+    };
+
+    let viewer;
+
+    function loadPanorama(key) {
+      const scene = panoramas[key];
+
+      if (viewer) {
+        viewer.destroy();
+      }
+
+      viewer = pannellum.viewer("panorama", {
+        type: "equirectangular",
+        panorama: scene.src,
+        autoLoad: true,
+        showControls: true,
+        backgroundColor: [0, 0, 0],
+        haov: scene.haov,
+        vaov: scene.vaov,
+        vOffset: scene.vOffset,
+        pitch: 0,
+        yaw: 0,
+        hfov: 100
+      });
+
+      document.querySelectorAll("[data-panorama]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.panorama === key));
+      });
+    }
+
+    document.querySelectorAll("[data-panorama]").forEach((button) => {
+      button.addEventListener("click", () => loadPanorama(button.dataset.panorama));
+    });
+
+    loadPanorama("remodeled");
+  </script>
+</body>
+</html>
