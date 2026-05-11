@@ -7,6 +7,7 @@
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <style>
     :root {
@@ -117,7 +118,7 @@
       left: 16px;
       bottom: 18px;
       z-index: 6;
-      width: min(390px, calc(100vw - 32px));
+      width: min(430px, calc(100vw - 32px));
       padding: 12px;
       border: 1px solid rgb(255 255 255 / 18%);
       border-radius: 8px;
@@ -195,9 +196,13 @@
       font-size: 0.86rem;
     }
 
+    .annotation-panel textarea + textarea {
+      margin-top: 8px;
+    }
+
     .annotation-readout {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
       margin-top: 10px;
       color: rgb(255 255 255 / 70%);
@@ -374,8 +379,11 @@
       <button type="button" id="close-outline" disabled>Close</button>
       <button type="button" id="clear-outline" disabled>Clear</button>
       <button type="button" id="export-crop" disabled>Export PNG</button>
+      <button type="button" id="save-region" disabled>Save Region</button>
+      <button type="button" id="export-pack" disabled>Export Pack</button>
       <a class="export-link" id="download-crop" aria-disabled="true">Download Crop</a>
       <a class="export-link" id="download-scribble" aria-disabled="true">Download Scribbles</a>
+      <a class="export-link" id="download-pack" aria-disabled="true">Download Pack</a>
     </div>
 
     <div class="color-palette" aria-label="Scribble color">
@@ -389,6 +397,7 @@
       <button type="button" data-color="#00FFFF" style="--swatch: #00FFFF" aria-label="Cyan" aria-pressed="false"></button>
     </div>
 
+    <textarea id="general-prompt" placeholder="General prompt for the whole panorama"></textarea>
     <textarea id="region-prompt" placeholder="Describe the change for this outlined area"></textarea>
 
     <div class="annotation-readout">
@@ -403,6 +412,10 @@
       <div>
         View pitch
         <strong id="view-pitch">0.0</strong>
+      </div>
+      <div>
+        Saved
+        <strong id="region-count">0</strong>
       </div>
     </div>
 
@@ -458,8 +471,12 @@
     let scribbleStrokes = [];
     let currentStroke;
     let activeColor = "#FF0000";
+    let savedRegions = [];
+    let nextRegionNumber = 1;
+    let currentExport;
     let cropObjectUrl;
     let scribbleObjectUrl;
+    let packObjectUrl;
 
     const drawCanvas = document.querySelector("#draw-layer");
     const drawContext = drawCanvas.getContext("2d");
@@ -468,12 +485,17 @@
     const closeOutline = document.querySelector("#close-outline");
     const clearOutline = document.querySelector("#clear-outline");
     const exportCrop = document.querySelector("#export-crop");
+    const saveRegion = document.querySelector("#save-region");
+    const exportPack = document.querySelector("#export-pack");
     const downloadCrop = document.querySelector("#download-crop");
     const downloadScribble = document.querySelector("#download-scribble");
+    const downloadPack = document.querySelector("#download-pack");
     const pointCount = document.querySelector("#point-count");
+    const regionCount = document.querySelector("#region-count");
     const viewYaw = document.querySelector("#view-yaw");
     const viewPitch = document.querySelector("#view-pitch");
     const coordinateOutput = document.querySelector("#coordinate-output");
+    const generalPrompt = document.querySelector("#general-prompt");
     const regionPrompt = document.querySelector("#region-prompt");
     const reviewPanel = document.querySelector("#review-panel");
     const reviewFrame = document.querySelector("#review-frame");
@@ -543,7 +565,7 @@
       };
     }
 
-    function canvasToPngUrl(canvas) {
+    function canvasToPngBlob(canvas) {
       return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => {
           if (!blob) {
@@ -551,9 +573,25 @@
             return;
           }
 
-          resolve(URL.createObjectURL(blob));
+          resolve(blob);
         }, "image/png");
       });
+    }
+
+    function getFileExtension(path) {
+      const match = path.match(/\.([a-z0-9]+)(?:$|\?)/i);
+
+      return match ? match[1].toLowerCase() : "png";
+    }
+
+    async function fetchSourceBlob(scene) {
+      const response = await fetch(scene.src);
+
+      if (!response.ok) {
+        throw new Error(`Could not fetch ${scene.src}`);
+      }
+
+      return response.blob();
     }
 
     function resetReview() {
@@ -562,6 +600,7 @@
       reviewScribble.removeAttribute("src");
       reviewFull.removeAttribute("src");
       cropOutput.textContent = "";
+      currentExport = undefined;
 
       if (cropObjectUrl) {
         URL.revokeObjectURL(cropObjectUrl);
@@ -571,6 +610,17 @@
       if (scribbleObjectUrl) {
         URL.revokeObjectURL(scribbleObjectUrl);
         scribbleObjectUrl = undefined;
+      }
+    }
+
+    function resetPackDownload() {
+      downloadPack.removeAttribute("href");
+      downloadPack.removeAttribute("download");
+      downloadPack.setAttribute("aria-disabled", "true");
+
+      if (packObjectUrl) {
+        URL.revokeObjectURL(packObjectUrl);
+        packObjectUrl = undefined;
       }
     }
 
@@ -614,9 +664,12 @@
 
     function updateAnnotationUi() {
       pointCount.textContent = points.length;
+      regionCount.textContent = savedRegions.length;
       closeOutline.disabled = points.length < 3 || isClosed;
       clearOutline.disabled = points.length === 0 && scribbleStrokes.length === 0;
       exportCrop.disabled = !isClosed;
+      saveRegion.disabled = !isClosed;
+      exportPack.disabled = savedRegions.length === 0;
       scribbleToggle.disabled = !isClosed;
       drawToggle.dataset.active = String(activeTool === "outline");
       scribbleToggle.dataset.active = String(activeTool === "scribble");
@@ -702,19 +755,27 @@
       updateAnnotationUi();
     }
 
-    function clearAnnotation() {
+    function clearAnnotation({ clearSaved = false } = {}) {
       points = [];
       scribbleStrokes = [];
       currentStroke = undefined;
       isClosed = false;
       activeTool = "none";
       resetReview();
+      regionPrompt.value = "";
       downloadCrop.removeAttribute("href");
       downloadCrop.removeAttribute("download");
       downloadCrop.setAttribute("aria-disabled", "true");
       downloadScribble.removeAttribute("href");
       downloadScribble.removeAttribute("download");
       downloadScribble.setAttribute("aria-disabled", "true");
+
+      if (clearSaved) {
+        savedRegions = [];
+        nextRegionNumber = 1;
+        resetPackDownload();
+      }
+
       syncViewerInteraction();
       renderOutline();
     }
@@ -762,102 +823,94 @@
       return inside;
     }
 
-    async function exportOutlinedCrop() {
+    function traceSourcePolygon(context, sourcePoints, box) {
+      context.beginPath();
+      context.moveTo(sourcePoints[0].x - box.left, sourcePoints[0].y - box.top);
+      sourcePoints.slice(1).forEach((point) => {
+        context.lineTo(point.x - box.left, point.y - box.top);
+      });
+      context.closePath();
+    }
+
+    function createRegionCanvases(image, sourcePoints, box, scene) {
+      const width = Math.max(1, box.right - box.left);
+      const height = Math.max(1, box.bottom - box.top);
+      const original = document.createElement("canvas");
+      const cutout = document.createElement("canvas");
+      const mask = document.createElement("canvas");
+      const scribbles = document.createElement("canvas");
+      const canvases = [original, cutout, mask, scribbles];
+
+      canvases.forEach((canvas) => {
+        canvas.width = width;
+        canvas.height = height;
+      });
+
+      original.getContext("2d").drawImage(image, box.left, box.top, width, height, 0, 0, width, height);
+
+      const cutoutContext = cutout.getContext("2d");
+      cutoutContext.save();
+      traceSourcePolygon(cutoutContext, sourcePoints, box);
+      cutoutContext.clip();
+      cutoutContext.drawImage(image, box.left, box.top, width, height, 0, 0, width, height);
+      cutoutContext.restore();
+
+      const maskContext = mask.getContext("2d");
+      maskContext.fillStyle = "#FFFFFF";
+      maskContext.fillRect(0, 0, width, height);
+      maskContext.globalCompositeOperation = "destination-out";
+      traceSourcePolygon(maskContext, sourcePoints, box);
+      maskContext.fill();
+      maskContext.globalCompositeOperation = "source-over";
+
+      renderScribbles(
+        scribbles.getContext("2d"),
+        scribbleStrokes,
+        (point) => {
+          const imagePoint = yawPitchToImagePoint(point, scene, image);
+
+          return {
+            x: imagePoint.x - box.left,
+            y: imagePoint.y - box.top
+          };
+        },
+        Math.max(6, Math.round(image.naturalWidth / 600))
+      );
+
+      return {
+        original,
+        cutout,
+        mask,
+        scribbles,
+        width,
+        height
+      };
+    }
+
+    async function buildCurrentRegionExport(regionId) {
       const scene = panoramas[currentPanorama];
 
       if (!isClosed) {
-        return;
+        throw new Error("Close an outline before exporting");
       }
 
-      exportCrop.disabled = true;
-      exportCrop.textContent = "Exporting...";
+      const image = await loadSourceImage(scene);
+      const sourcePoints = points.map((point) => yawPitchToImagePoint(point, scene, image));
+      const box = getSourceBoundingBox(sourcePoints, image);
+      const canvases = createRegionCanvases(image, sourcePoints, box, scene);
+      const [originalBlob, cutoutBlob, maskBlob, scribbleBlob] = await Promise.all([
+        canvasToPngBlob(canvases.original),
+        canvasToPngBlob(canvases.cutout),
+        canvasToPngBlob(canvases.mask),
+        canvasToPngBlob(canvases.scribbles)
+      ]);
 
-      try {
-        const image = await loadSourceImage(scene);
-        const sourcePoints = points.map((point) => yawPitchToImagePoint(point, scene, image));
-        const box = getSourceBoundingBox(sourcePoints, image);
-        const width = Math.max(1, box.right - box.left);
-        const height = Math.max(1, box.bottom - box.top);
-        const output = document.createElement("canvas");
-        const outputContext = output.getContext("2d");
-        const scribbleCanvas = document.createElement("canvas");
-        const scribbleContext = scribbleCanvas.getContext("2d");
-
-        output.width = width;
-        output.height = height;
-        scribbleCanvas.width = width;
-        scribbleCanvas.height = height;
-
-        outputContext.save();
-        outputContext.beginPath();
-        outputContext.moveTo(sourcePoints[0].x - box.left, sourcePoints[0].y - box.top);
-        sourcePoints.slice(1).forEach((point) => {
-          outputContext.lineTo(point.x - box.left, point.y - box.top);
-        });
-        outputContext.closePath();
-        outputContext.clip();
-        outputContext.drawImage(
-          image,
-          box.left,
-          box.top,
-          width,
-          height,
-          0,
-          0,
-          width,
-          height
-        );
-        outputContext.restore();
-
-        renderScribbles(
-          scribbleContext,
-          scribbleStrokes,
-          (point) => {
-            const imagePoint = yawPitchToImagePoint(point, scene, image);
-
-            return {
-              x: imagePoint.x - box.left,
-              y: imagePoint.y - box.top
-            };
-          },
-          Math.max(6, Math.round(image.naturalWidth / 600))
-        );
-
-        if (cropObjectUrl) {
-          URL.revokeObjectURL(cropObjectUrl);
-        }
-
-        if (scribbleObjectUrl) {
-          URL.revokeObjectURL(scribbleObjectUrl);
-        }
-
-        cropObjectUrl = await canvasToPngUrl(output);
-        scribbleObjectUrl = await canvasToPngUrl(scribbleCanvas);
-        downloadCrop.href = cropObjectUrl;
-        downloadCrop.download = `panoreno-${currentPanorama}-transparent-crop-${Date.now()}.png`;
-        downloadCrop.removeAttribute("aria-disabled");
-        downloadScribble.href = scribbleObjectUrl;
-        downloadScribble.download = `panoreno-${currentPanorama}-scribbles-${Date.now()}.png`;
-        downloadScribble.removeAttribute("aria-disabled");
-
-        reviewPanel.hidden = false;
-        reviewFrame.style.aspectRatio = `${image.naturalWidth} / ${image.naturalHeight}`;
-        reviewFull.src = scene.src;
-        reviewCrop.src = cropObjectUrl;
-        reviewScribble.src = scribbleObjectUrl;
-        reviewCrop.style.left = `${(box.left / image.naturalWidth) * 100}%`;
-        reviewCrop.style.top = `${(box.top / image.naturalHeight) * 100}%`;
-        reviewCrop.style.width = `${(width / image.naturalWidth) * 100}%`;
-        reviewCrop.style.height = `${(height / image.naturalHeight) * 100}%`;
-        reviewScribble.style.left = reviewCrop.style.left;
-        reviewScribble.style.top = reviewCrop.style.top;
-        reviewScribble.style.width = reviewCrop.style.width;
-        reviewScribble.style.height = reviewCrop.style.height;
-        setOpacityDisplays();
-
-        cropOutput.textContent = JSON.stringify({
+      return {
+        metadata: {
+          id: regionId,
+          sceneKey: currentPanorama,
           source: scene.src,
-          prompt: regionPrompt.value,
+          prompt: regionPrompt.value.trim(),
           image: {
             width: image.naturalWidth,
             height: image.naturalHeight
@@ -865,8 +918,11 @@
           crop: {
             x: box.left,
             y: box.top,
-            width,
-            height
+            width: canvases.width,
+            height: canvases.height
+          },
+          mask: {
+            meaning: "transparent pixels are the editable polygon; opaque pixels are preserved"
           },
           scribbles: scribbleStrokes.map((stroke) => ({
             color: stroke.color,
@@ -887,14 +943,160 @@
             yaw: Number(point.yaw.toFixed(3)),
             pitch: Number(point.pitch.toFixed(3))
           }))
-        }, null, 2);
+        },
+        blobs: {
+          original: originalBlob,
+          cutout: cutoutBlob,
+          mask: maskBlob,
+          scribbles: scribbleBlob
+        }
+      };
+    }
 
-        downloadCrop.click();
+    function showRegionExport(region) {
+      const scene = panoramas[region.metadata.sceneKey];
+      const { image, crop } = region.metadata;
+
+      currentExport = region;
+
+      if (cropObjectUrl) {
+        URL.revokeObjectURL(cropObjectUrl);
+      }
+
+      if (scribbleObjectUrl) {
+        URL.revokeObjectURL(scribbleObjectUrl);
+      }
+
+      cropObjectUrl = URL.createObjectURL(region.blobs.cutout);
+      scribbleObjectUrl = URL.createObjectURL(region.blobs.scribbles);
+      downloadCrop.href = cropObjectUrl;
+      downloadCrop.download = `${region.metadata.id}-crop-cutout.png`;
+      downloadCrop.removeAttribute("aria-disabled");
+      downloadScribble.href = scribbleObjectUrl;
+      downloadScribble.download = `${region.metadata.id}-scribbles.png`;
+      downloadScribble.removeAttribute("aria-disabled");
+
+      reviewPanel.hidden = false;
+      reviewFrame.style.aspectRatio = `${image.width} / ${image.height}`;
+      reviewFull.src = scene.src;
+      reviewCrop.src = cropObjectUrl;
+      reviewScribble.src = scribbleObjectUrl;
+      reviewCrop.style.left = `${(crop.x / image.width) * 100}%`;
+      reviewCrop.style.top = `${(crop.y / image.height) * 100}%`;
+      reviewCrop.style.width = `${(crop.width / image.width) * 100}%`;
+      reviewCrop.style.height = `${(crop.height / image.height) * 100}%`;
+      reviewScribble.style.left = reviewCrop.style.left;
+      reviewScribble.style.top = reviewCrop.style.top;
+      reviewScribble.style.width = reviewCrop.style.width;
+      reviewScribble.style.height = reviewCrop.style.height;
+      cropOutput.textContent = JSON.stringify(region.metadata, null, 2);
+      setOpacityDisplays();
+    }
+
+    async function exportOutlinedCrop() {
+      exportCrop.disabled = true;
+      exportCrop.textContent = "Exporting...";
+
+      try {
+        const region = await buildCurrentRegionExport(`preview-${Date.now()}`);
+        showRegionExport(region);
       } catch (error) {
         cropOutput.textContent = error.message;
         reviewPanel.hidden = false;
       } finally {
         exportCrop.textContent = "Export PNG";
+        updateAnnotationUi();
+      }
+    }
+
+    async function saveCurrentRegion() {
+      const regionId = `region-${String(nextRegionNumber).padStart(3, "0")}`;
+
+      saveRegion.disabled = true;
+      saveRegion.textContent = "Saving...";
+
+      try {
+        const region = await buildCurrentRegionExport(regionId);
+        savedRegions.push(region);
+        nextRegionNumber += 1;
+        resetPackDownload();
+        clearAnnotation();
+      } catch (error) {
+        cropOutput.textContent = error.message;
+        reviewPanel.hidden = false;
+      } finally {
+        saveRegion.textContent = "Save Region";
+        updateAnnotationUi();
+      }
+    }
+
+    async function exportRegionPack() {
+      if (savedRegions.length === 0 || !window.JSZip) {
+        return;
+      }
+
+      const scene = panoramas[currentPanorama];
+      const zip = new JSZip();
+      const sourceExtension = getFileExtension(scene.src);
+      const sourceFile = `source/${currentPanorama}.${sourceExtension}`;
+
+      exportPack.disabled = true;
+      exportPack.textContent = "Zipping...";
+
+      try {
+        zip.file(sourceFile, await fetchSourceBlob(scene));
+
+        const manifestRegions = savedRegions.map((region) => {
+          const folder = `regions/${region.metadata.id}`;
+
+          zip.file(`${folder}/crop-original.png`, region.blobs.original);
+          zip.file(`${folder}/crop-cutout.png`, region.blobs.cutout);
+          zip.file(`${folder}/mask-edit-area.png`, region.blobs.mask);
+          zip.file(`${folder}/scribbles.png`, region.blobs.scribbles);
+          zip.file(`${folder}/prompt.txt`, region.metadata.prompt);
+
+          return {
+            ...region.metadata,
+            files: {
+              originalCrop: `${folder}/crop-original.png`,
+              transparentCrop: `${folder}/crop-cutout.png`,
+              editMask: `${folder}/mask-edit-area.png`,
+              scribbles: `${folder}/scribbles.png`,
+              prompt: `${folder}/prompt.txt`
+            }
+          };
+        });
+
+        zip.file("manifest.json", JSON.stringify({
+          version: 1,
+          createdAt: new Date().toISOString(),
+          panorama: {
+            key: currentPanorama,
+            label: scene.label,
+            source: scene.src,
+            sourceFile,
+            haov: scene.haov,
+            vaov: scene.vaov,
+            vOffset: scene.vOffset
+          },
+          generalPrompt: generalPrompt.value.trim(),
+          regions: manifestRegions
+        }, null, 2));
+
+        if (packObjectUrl) {
+          URL.revokeObjectURL(packObjectUrl);
+        }
+
+        packObjectUrl = URL.createObjectURL(await zip.generateAsync({ type: "blob" }));
+        downloadPack.href = packObjectUrl;
+        downloadPack.download = `panoreno-test-pack-${Date.now()}.zip`;
+        downloadPack.removeAttribute("aria-disabled");
+        downloadPack.click();
+      } catch (error) {
+        cropOutput.textContent = error.message;
+        reviewPanel.hidden = false;
+      } finally {
+        exportPack.textContent = "Export Pack";
         updateAnnotationUi();
       }
     }
@@ -925,7 +1127,7 @@
         button.setAttribute("aria-pressed", String(button.dataset.panorama === key));
       });
 
-      clearAnnotation();
+      clearAnnotation({ clearSaved: true });
       activeTool = "none";
       syncViewerInteraction();
       updateAnnotationUi();
@@ -996,8 +1198,10 @@
       syncViewerInteraction();
       renderOutline();
     });
-    clearOutline.addEventListener("click", clearAnnotation);
+    clearOutline.addEventListener("click", () => clearAnnotation());
     exportCrop.addEventListener("click", exportOutlinedCrop);
+    saveRegion.addEventListener("click", saveCurrentRegion);
+    exportPack.addEventListener("click", exportRegionPack);
     fullOpacity.addEventListener("input", setOpacityDisplays);
     cropOpacity.addEventListener("input", setOpacityDisplays);
     downloadCrop.addEventListener("click", (event) => {
@@ -1007,6 +1211,11 @@
     });
     downloadScribble.addEventListener("click", (event) => {
       if (!downloadScribble.href) {
+        event.preventDefault();
+      }
+    });
+    downloadPack.addEventListener("click", (event) => {
+      if (!downloadPack.href) {
         event.preventDefault();
       }
     });
