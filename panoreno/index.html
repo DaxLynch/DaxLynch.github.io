@@ -159,6 +159,28 @@
       background: #f4f1e8;
     }
 
+    .color-palette {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 0 0 10px;
+    }
+
+    .color-palette button {
+      width: 28px;
+      height: 28px;
+      border: 2px solid rgb(255 255 255 / 36%);
+      border-radius: 999px;
+      padding: 0;
+      background: var(--swatch);
+      cursor: pointer;
+    }
+
+    .color-palette button[aria-pressed="true"] {
+      border-color: #f4f1e8;
+      box-shadow: 0 0 0 2px rgb(0 0 0 / 72%), 0 0 0 4px #f4f1e8;
+    }
+
     .annotation-panel textarea {
       box-sizing: border-box;
       width: 100%;
@@ -260,6 +282,11 @@
       pointer-events: none;
     }
 
+    .review-scribble {
+      position: absolute;
+      pointer-events: none;
+    }
+
     .opacity-controls {
       display: grid;
       grid-template-columns: 82px 1fr 42px;
@@ -343,10 +370,23 @@
   <aside class="annotation-panel" aria-label="Panorama annotation tools">
     <div class="annotation-actions">
       <button type="button" id="draw-toggle">Draw Outline</button>
+      <button type="button" id="scribble-toggle" disabled>Draw Scribble</button>
       <button type="button" id="close-outline" disabled>Close</button>
       <button type="button" id="clear-outline" disabled>Clear</button>
       <button type="button" id="export-crop" disabled>Export PNG</button>
-      <a class="export-link" id="download-crop" aria-disabled="true">Download PNG</a>
+      <a class="export-link" id="download-crop" aria-disabled="true">Download Crop</a>
+      <a class="export-link" id="download-scribble" aria-disabled="true">Download Scribbles</a>
+    </div>
+
+    <div class="color-palette" aria-label="Scribble color">
+      <button type="button" data-color="#FF0000" style="--swatch: #FF0000" aria-label="Red" aria-pressed="true"></button>
+      <button type="button" data-color="#000000" style="--swatch: #000000" aria-label="Black" aria-pressed="false"></button>
+      <button type="button" data-color="#0000FF" style="--swatch: #0000FF" aria-label="Blue" aria-pressed="false"></button>
+      <button type="button" data-color="#00FF00" style="--swatch: #00FF00" aria-label="Green" aria-pressed="false"></button>
+      <button type="button" data-color="#FFFF00" style="--swatch: #FFFF00" aria-label="Yellow" aria-pressed="false"></button>
+      <button type="button" data-color="#FFFFFF" style="--swatch: #FFFFFF" aria-label="White" aria-pressed="false"></button>
+      <button type="button" data-color="#FF00FF" style="--swatch: #FF00FF" aria-label="Magenta" aria-pressed="false"></button>
+      <button type="button" data-color="#00FFFF" style="--swatch: #00FFFF" aria-label="Cyan" aria-pressed="false"></button>
     </div>
 
     <textarea id="region-prompt" placeholder="Describe the change for this outlined area"></textarea>
@@ -374,6 +414,7 @@
     <div class="review-frame" id="review-frame">
       <img class="review-full" id="review-full" alt="Full source panorama">
       <img class="review-crop" id="review-crop" alt="Transparent extracted crop">
+      <img class="review-scribble" id="review-scribble" alt="Transparent scribble layer">
     </div>
 
     <label class="opacity-controls" for="full-opacity">
@@ -411,31 +452,40 @@
 
     let viewer;
     let currentPanorama = "remodeled";
-    let isDrawing = false;
+    let activeTool = "none";
     let isClosed = false;
     let points = [];
+    let scribbleStrokes = [];
+    let currentStroke;
+    let activeColor = "#FF0000";
     let cropObjectUrl;
+    let scribbleObjectUrl;
 
     const drawCanvas = document.querySelector("#draw-layer");
     const drawContext = drawCanvas.getContext("2d");
     const drawToggle = document.querySelector("#draw-toggle");
+    const scribbleToggle = document.querySelector("#scribble-toggle");
     const closeOutline = document.querySelector("#close-outline");
     const clearOutline = document.querySelector("#clear-outline");
     const exportCrop = document.querySelector("#export-crop");
     const downloadCrop = document.querySelector("#download-crop");
+    const downloadScribble = document.querySelector("#download-scribble");
     const pointCount = document.querySelector("#point-count");
     const viewYaw = document.querySelector("#view-yaw");
     const viewPitch = document.querySelector("#view-pitch");
     const coordinateOutput = document.querySelector("#coordinate-output");
+    const regionPrompt = document.querySelector("#region-prompt");
     const reviewPanel = document.querySelector("#review-panel");
     const reviewFrame = document.querySelector("#review-frame");
     const reviewFull = document.querySelector("#review-full");
     const reviewCrop = document.querySelector("#review-crop");
+    const reviewScribble = document.querySelector("#review-scribble");
     const fullOpacity = document.querySelector("#full-opacity");
     const cropOpacity = document.querySelector("#crop-opacity");
     const fullOpacityValue = document.querySelector("#full-opacity-value");
     const cropOpacityValue = document.querySelector("#crop-opacity-value");
     const cropOutput = document.querySelector("#crop-output");
+    const colorButtons = document.querySelectorAll("[data-color]");
     const imageCache = {};
 
     function clamp(value, min, max) {
@@ -509,6 +559,7 @@
     function resetReview() {
       reviewPanel.hidden = true;
       reviewCrop.removeAttribute("src");
+      reviewScribble.removeAttribute("src");
       reviewFull.removeAttribute("src");
       cropOutput.textContent = "";
 
@@ -516,13 +567,41 @@
         URL.revokeObjectURL(cropObjectUrl);
         cropObjectUrl = undefined;
       }
+
+      if (scribbleObjectUrl) {
+        URL.revokeObjectURL(scribbleObjectUrl);
+        scribbleObjectUrl = undefined;
+      }
     }
 
     function setOpacityDisplays() {
       reviewFull.style.opacity = fullOpacity.value;
       reviewCrop.style.opacity = cropOpacity.value;
+      reviewScribble.style.opacity = cropOpacity.value;
       fullOpacityValue.value = `${Math.round(Number(fullOpacity.value) * 100)}%`;
       cropOpacityValue.value = `${Math.round(Number(cropOpacity.value) * 100)}%`;
+    }
+
+    function syncViewerInteraction() {
+      const isDrawing = activeTool !== "none";
+
+      document.body.classList.toggle("is-drawing", isDrawing);
+
+      if (!viewer) {
+        return;
+      }
+
+      if (typeof viewer.setMouseZoom === "function") {
+        viewer.setMouseZoom(!isDrawing);
+      }
+
+      if (typeof viewer.setKeyboardZoom === "function") {
+        viewer.setKeyboardZoom(!isDrawing);
+      }
+
+      if (typeof viewer.setDraggable === "function") {
+        viewer.setDraggable(!isDrawing);
+      }
     }
 
     function resizeDrawCanvas() {
@@ -536,10 +615,13 @@
     function updateAnnotationUi() {
       pointCount.textContent = points.length;
       closeOutline.disabled = points.length < 3 || isClosed;
-      clearOutline.disabled = points.length === 0;
+      clearOutline.disabled = points.length === 0 && scribbleStrokes.length === 0;
       exportCrop.disabled = !isClosed;
-      drawToggle.dataset.active = String(isDrawing);
-      drawToggle.textContent = isDrawing ? "Stop Drawing" : "Draw Outline";
+      scribbleToggle.disabled = !isClosed;
+      drawToggle.dataset.active = String(activeTool === "outline");
+      scribbleToggle.dataset.active = String(activeTool === "scribble");
+      drawToggle.textContent = activeTool === "outline" ? "Stop Outline" : "Draw Outline";
+      scribbleToggle.textContent = activeTool === "scribble" ? "Stop Scribble" : "Draw Scribble";
 
       if (viewer) {
         viewYaw.textContent = viewer.getYaw().toFixed(1);
@@ -552,6 +634,32 @@
         pitch: Number(point.pitch.toFixed(3)),
         yaw: Number(point.yaw.toFixed(3))
       })), null, 2);
+    }
+
+    function renderScribbles(context, strokes, mapper = (point) => point, lineWidth = 6) {
+      strokes.forEach((stroke) => {
+        if (stroke.points.length === 0) {
+          return;
+        }
+
+        context.save();
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.lineWidth = lineWidth;
+        context.strokeStyle = stroke.color;
+        context.beginPath();
+
+        const firstPoint = mapper(stroke.points[0]);
+        context.moveTo(firstPoint.x, firstPoint.y);
+
+        stroke.points.slice(1).forEach((point) => {
+          const mappedPoint = mapper(point);
+          context.lineTo(mappedPoint.x, mappedPoint.y);
+        });
+
+        context.stroke();
+        context.restore();
+      });
     }
 
     function renderOutline() {
@@ -579,6 +687,8 @@
 
       drawContext.stroke();
 
+      renderScribbles(drawContext, scribbleStrokes);
+
       points.forEach((point) => {
         drawContext.beginPath();
         drawContext.arc(point.x, point.y, 5, 0, Math.PI * 2);
@@ -594,32 +704,24 @@
 
     function clearAnnotation() {
       points = [];
+      scribbleStrokes = [];
+      currentStroke = undefined;
       isClosed = false;
+      activeTool = "none";
       resetReview();
       downloadCrop.removeAttribute("href");
       downloadCrop.removeAttribute("download");
       downloadCrop.setAttribute("aria-disabled", "true");
+      downloadScribble.removeAttribute("href");
+      downloadScribble.removeAttribute("download");
+      downloadScribble.setAttribute("aria-disabled", "true");
+      syncViewerInteraction();
       renderOutline();
     }
 
-    function setDrawing(nextValue) {
-      isDrawing = nextValue;
-      document.body.classList.toggle("is-drawing", isDrawing);
-
-      if (viewer) {
-        if (typeof viewer.setMouseZoom === "function") {
-          viewer.setMouseZoom(!isDrawing);
-        }
-
-        if (typeof viewer.setKeyboardZoom === "function") {
-          viewer.setKeyboardZoom(!isDrawing);
-        }
-
-        if (typeof viewer.setDraggable === "function") {
-          viewer.setDraggable(!isDrawing);
-        }
-      }
-
+    function setTool(nextTool) {
+      activeTool = activeTool === nextTool ? "none" : nextTool;
+      syncViewerInteraction();
       updateAnnotationUi();
     }
 
@@ -637,6 +739,27 @@
         pitch: coords[0],
         yaw: coords[1]
       };
+    }
+
+    function pointIsInsideOutline(point) {
+      if (points.length < 3) {
+        return false;
+      }
+
+      let inside = false;
+
+      for (let index = 0, previousIndex = points.length - 1; index < points.length; previousIndex = index++) {
+        const current = points[index];
+        const previous = points[previousIndex];
+        const intersects = ((current.y > point.y) !== (previous.y > point.y))
+          && (point.x < ((previous.x - current.x) * (point.y - current.y)) / (previous.y - current.y) + current.x);
+
+        if (intersects) {
+          inside = !inside;
+        }
+      }
+
+      return inside;
     }
 
     async function exportOutlinedCrop() {
@@ -657,9 +780,13 @@
         const height = Math.max(1, box.bottom - box.top);
         const output = document.createElement("canvas");
         const outputContext = output.getContext("2d");
+        const scribbleCanvas = document.createElement("canvas");
+        const scribbleContext = scribbleCanvas.getContext("2d");
 
         output.width = width;
         output.height = height;
+        scribbleCanvas.width = width;
+        scribbleCanvas.height = height;
 
         outputContext.save();
         outputContext.beginPath();
@@ -682,27 +809,55 @@
         );
         outputContext.restore();
 
+        renderScribbles(
+          scribbleContext,
+          scribbleStrokes,
+          (point) => {
+            const imagePoint = yawPitchToImagePoint(point, scene, image);
+
+            return {
+              x: imagePoint.x - box.left,
+              y: imagePoint.y - box.top
+            };
+          },
+          Math.max(6, Math.round(image.naturalWidth / 600))
+        );
+
         if (cropObjectUrl) {
           URL.revokeObjectURL(cropObjectUrl);
         }
 
+        if (scribbleObjectUrl) {
+          URL.revokeObjectURL(scribbleObjectUrl);
+        }
+
         cropObjectUrl = await canvasToPngUrl(output);
+        scribbleObjectUrl = await canvasToPngUrl(scribbleCanvas);
         downloadCrop.href = cropObjectUrl;
         downloadCrop.download = `panoreno-${currentPanorama}-transparent-crop-${Date.now()}.png`;
         downloadCrop.removeAttribute("aria-disabled");
+        downloadScribble.href = scribbleObjectUrl;
+        downloadScribble.download = `panoreno-${currentPanorama}-scribbles-${Date.now()}.png`;
+        downloadScribble.removeAttribute("aria-disabled");
 
         reviewPanel.hidden = false;
         reviewFrame.style.aspectRatio = `${image.naturalWidth} / ${image.naturalHeight}`;
         reviewFull.src = scene.src;
         reviewCrop.src = cropObjectUrl;
+        reviewScribble.src = scribbleObjectUrl;
         reviewCrop.style.left = `${(box.left / image.naturalWidth) * 100}%`;
         reviewCrop.style.top = `${(box.top / image.naturalHeight) * 100}%`;
         reviewCrop.style.width = `${(width / image.naturalWidth) * 100}%`;
         reviewCrop.style.height = `${(height / image.naturalHeight) * 100}%`;
+        reviewScribble.style.left = reviewCrop.style.left;
+        reviewScribble.style.top = reviewCrop.style.top;
+        reviewScribble.style.width = reviewCrop.style.width;
+        reviewScribble.style.height = reviewCrop.style.height;
         setOpacityDisplays();
 
         cropOutput.textContent = JSON.stringify({
           source: scene.src,
+          prompt: regionPrompt.value,
           image: {
             width: image.naturalWidth,
             height: image.naturalHeight
@@ -713,6 +868,19 @@
             width,
             height
           },
+          scribbles: scribbleStrokes.map((stroke) => ({
+            color: stroke.color,
+            points: stroke.points.map((point) => {
+              const imagePoint = yawPitchToImagePoint(point, scene, image);
+
+              return {
+                x: Math.round(imagePoint.x),
+                y: Math.round(imagePoint.y),
+                yaw: Number(point.yaw.toFixed(3)),
+                pitch: Number(point.pitch.toFixed(3))
+              };
+            })
+          })),
           polygon: sourcePoints.map((point) => ({
             x: Math.round(point.x),
             y: Math.round(point.y),
@@ -758,7 +926,9 @@
       });
 
       clearAnnotation();
-      setDrawing(false);
+      activeTool = "none";
+      syncViewerInteraction();
+      updateAnnotationUi();
     }
 
     document.querySelectorAll("[data-panorama]").forEach((button) => {
@@ -766,19 +936,64 @@
     });
 
     drawCanvas.addEventListener("pointerdown", (event) => {
-      if (!isDrawing || isClosed) {
+      if (activeTool === "outline" && !isClosed) {
+        event.preventDefault();
+        points.push(getCanvasPoint(event));
+        renderOutline();
+        return;
+      }
+
+      if (activeTool !== "scribble" || !isClosed) {
         return;
       }
 
       event.preventDefault();
-      points.push(getCanvasPoint(event));
+      const point = getCanvasPoint(event);
+
+      if (!pointIsInsideOutline(point)) {
+        return;
+      }
+
+      currentStroke = {
+        color: activeColor,
+        points: [point]
+      };
+      scribbleStrokes.push(currentStroke);
+      drawCanvas.setPointerCapture(event.pointerId);
       renderOutline();
     });
 
-    drawToggle.addEventListener("click", () => setDrawing(!isDrawing));
+    drawCanvas.addEventListener("pointermove", (event) => {
+      if (activeTool !== "scribble" || !currentStroke) {
+        return;
+      }
+
+      event.preventDefault();
+      const point = getCanvasPoint(event);
+
+      if (!pointIsInsideOutline(point)) {
+        currentStroke = undefined;
+        return;
+      }
+
+      currentStroke.points.push(point);
+      renderOutline();
+    });
+
+    drawCanvas.addEventListener("pointerup", () => {
+      currentStroke = undefined;
+    });
+
+    drawCanvas.addEventListener("pointercancel", () => {
+      currentStroke = undefined;
+    });
+
+    drawToggle.addEventListener("click", () => setTool("outline"));
+    scribbleToggle.addEventListener("click", () => setTool("scribble"));
     closeOutline.addEventListener("click", () => {
       isClosed = points.length >= 3;
-      setDrawing(false);
+      activeTool = "none";
+      syncViewerInteraction();
       renderOutline();
     });
     clearOutline.addEventListener("click", clearAnnotation);
@@ -789,6 +1004,20 @@
       if (!downloadCrop.href) {
         event.preventDefault();
       }
+    });
+    downloadScribble.addEventListener("click", (event) => {
+      if (!downloadScribble.href) {
+        event.preventDefault();
+      }
+    });
+    colorButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        activeColor = button.dataset.color;
+
+        colorButtons.forEach((colorButton) => {
+          colorButton.setAttribute("aria-pressed", String(colorButton === button));
+        });
+      });
     });
     window.addEventListener("resize", resizeDrawCanvas);
     window.setInterval(updateAnnotationUi, 300);
