@@ -23,6 +23,10 @@
       overflow: hidden;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     #panorama {
       width: 100vw;
       height: 100vh;
@@ -200,6 +204,92 @@
       white-space: pre-wrap;
     }
 
+    .review-panel {
+      position: fixed;
+      right: 16px;
+      bottom: 18px;
+      z-index: 6;
+      width: min(46vw, 720px);
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+      padding: 12px;
+      border: 1px solid rgb(255 255 255 / 18%);
+      border-radius: 8px;
+      color: white;
+      background: rgb(0 0 0 / 70%);
+      box-shadow: 0 18px 50px rgb(0 0 0 / 38%);
+      backdrop-filter: blur(14px);
+    }
+
+    .review-panel h2 {
+      margin: 0 0 10px;
+      font-size: 0.92rem;
+      letter-spacing: 0;
+    }
+
+    .review-frame {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      border: 1px solid rgb(255 255 255 / 14%);
+      border-radius: 6px;
+      background:
+        linear-gradient(45deg, rgb(255 255 255 / 12%) 25%, transparent 25%),
+        linear-gradient(-45deg, rgb(255 255 255 / 12%) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgb(255 255 255 / 12%) 75%),
+        linear-gradient(-45deg, transparent 75%, rgb(255 255 255 / 12%) 75%);
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+      background-size: 16px 16px;
+    }
+
+    .review-full,
+    .review-crop {
+      display: block;
+      user-select: none;
+    }
+
+    .review-full {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .review-crop {
+      position: absolute;
+      outline: 1px solid rgb(255 235 59 / 78%);
+      pointer-events: none;
+    }
+
+    .opacity-controls {
+      display: grid;
+      grid-template-columns: 82px 1fr 42px;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      color: rgb(255 255 255 / 72%);
+      font-size: 0.78rem;
+    }
+
+    .opacity-controls input {
+      width: 100%;
+      accent-color: #f4f1e8;
+    }
+
+    .crop-output {
+      box-sizing: border-box;
+      width: 100%;
+      max-height: 110px;
+      margin: 10px 0 0;
+      overflow: auto;
+      border: 1px solid rgb(255 255 255 / 12%);
+      border-radius: 6px;
+      padding: 8px;
+      color: rgb(255 255 255 / 72%);
+      background: rgb(0 0 0 / 32%);
+      font: 0.72rem ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
     @media (max-width: 680px) {
       .viewer-header {
         align-items: flex-start;
@@ -223,6 +313,12 @@
         left: 12px;
         right: 12px;
         bottom: 12px;
+        width: auto;
+      }
+
+      .review-panel {
+        left: 12px;
+        right: 12px;
         width: auto;
       }
     }
@@ -249,8 +345,8 @@
       <button type="button" id="draw-toggle">Draw Outline</button>
       <button type="button" id="close-outline" disabled>Close</button>
       <button type="button" id="clear-outline" disabled>Clear</button>
-      <button type="button" id="export-crop" disabled>Export Crop</button>
-      <a class="export-link" id="download-crop" aria-disabled="true">Download</a>
+      <button type="button" id="export-crop" disabled>Export PNG</button>
+      <a class="export-link" id="download-crop" aria-disabled="true">Download PNG</a>
     </div>
 
     <textarea id="region-prompt" placeholder="Describe the change for this outlined area"></textarea>
@@ -273,6 +369,28 @@
     <pre class="coordinate-output" id="coordinate-output">[]</pre>
   </aside>
 
+  <aside class="review-panel" id="review-panel" aria-label="Panorama crop verification" hidden>
+    <h2>Crop Check</h2>
+    <div class="review-frame" id="review-frame">
+      <img class="review-full" id="review-full" alt="Full source panorama">
+      <img class="review-crop" id="review-crop" alt="Transparent extracted crop">
+    </div>
+
+    <label class="opacity-controls" for="full-opacity">
+      Full
+      <input id="full-opacity" type="range" min="0" max="1" value="0.45" step="0.01">
+      <output id="full-opacity-value" for="full-opacity">45%</output>
+    </label>
+
+    <label class="opacity-controls" for="crop-opacity">
+      Crop
+      <input id="crop-opacity" type="range" min="0" max="1" value="1" step="0.01">
+      <output id="crop-opacity-value" for="crop-opacity">100%</output>
+    </label>
+
+    <pre class="crop-output" id="crop-output"></pre>
+  </aside>
+
   <script>
     const panoramas = {
       original: {
@@ -292,9 +410,11 @@
     };
 
     let viewer;
+    let currentPanorama = "remodeled";
     let isDrawing = false;
     let isClosed = false;
     let points = [];
+    let cropObjectUrl;
 
     const drawCanvas = document.querySelector("#draw-layer");
     const drawContext = drawCanvas.getContext("2d");
@@ -307,6 +427,103 @@
     const viewYaw = document.querySelector("#view-yaw");
     const viewPitch = document.querySelector("#view-pitch");
     const coordinateOutput = document.querySelector("#coordinate-output");
+    const reviewPanel = document.querySelector("#review-panel");
+    const reviewFrame = document.querySelector("#review-frame");
+    const reviewFull = document.querySelector("#review-full");
+    const reviewCrop = document.querySelector("#review-crop");
+    const fullOpacity = document.querySelector("#full-opacity");
+    const cropOpacity = document.querySelector("#crop-opacity");
+    const fullOpacityValue = document.querySelector("#full-opacity-value");
+    const cropOpacityValue = document.querySelector("#crop-opacity-value");
+    const cropOutput = document.querySelector("#crop-output");
+    const imageCache = {};
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function getSignedAngleDelta(value) {
+      return ((((value + 180) % 360) + 360) % 360) - 180;
+    }
+
+    function loadSourceImage(scene) {
+      if (imageCache[scene.src]) {
+        return Promise.resolve(imageCache[scene.src]);
+      }
+
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+
+        image.addEventListener("load", () => {
+          imageCache[scene.src] = image;
+          resolve(image);
+        });
+
+        image.addEventListener("error", () => {
+          reject(new Error(`Could not load ${scene.src}`));
+        });
+
+        image.src = scene.src;
+      });
+    }
+
+    function yawPitchToImagePoint(point, scene, image) {
+      const centerYaw = scene.hOffset || 0;
+      const yawDelta = getSignedAngleDelta(point.yaw - centerYaw);
+      const topPitch = scene.vOffset + (scene.vaov / 2);
+
+      return {
+        x: clamp(((yawDelta + (scene.haov / 2)) / scene.haov) * image.naturalWidth, 0, image.naturalWidth),
+        y: clamp(((topPitch - point.pitch) / scene.vaov) * image.naturalHeight, 0, image.naturalHeight),
+        pitch: point.pitch,
+        yaw: point.yaw
+      };
+    }
+
+    function getSourceBoundingBox(sourcePoints, image) {
+      const xs = sourcePoints.map((point) => point.x);
+      const ys = sourcePoints.map((point) => point.y);
+      const padding = 8;
+
+      return {
+        left: clamp(Math.floor(Math.min(...xs) - padding), 0, image.naturalWidth),
+        top: clamp(Math.floor(Math.min(...ys) - padding), 0, image.naturalHeight),
+        right: clamp(Math.ceil(Math.max(...xs) + padding), 0, image.naturalWidth),
+        bottom: clamp(Math.ceil(Math.max(...ys) + padding), 0, image.naturalHeight)
+      };
+    }
+
+    function canvasToPngUrl(canvas) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error("Could not create PNG export"));
+            return;
+          }
+
+          resolve(URL.createObjectURL(blob));
+        }, "image/png");
+      });
+    }
+
+    function resetReview() {
+      reviewPanel.hidden = true;
+      reviewCrop.removeAttribute("src");
+      reviewFull.removeAttribute("src");
+      cropOutput.textContent = "";
+
+      if (cropObjectUrl) {
+        URL.revokeObjectURL(cropObjectUrl);
+        cropObjectUrl = undefined;
+      }
+    }
+
+    function setOpacityDisplays() {
+      reviewFull.style.opacity = fullOpacity.value;
+      reviewCrop.style.opacity = cropOpacity.value;
+      fullOpacityValue.value = `${Math.round(Number(fullOpacity.value) * 100)}%`;
+      cropOpacityValue.value = `${Math.round(Number(cropOpacity.value) * 100)}%`;
+    }
 
     function resizeDrawCanvas() {
       const scale = window.devicePixelRatio || 1;
@@ -378,6 +595,7 @@
     function clearAnnotation() {
       points = [];
       isClosed = false;
+      resetReview();
       downloadCrop.removeAttribute("href");
       downloadCrop.removeAttribute("download");
       downloadCrop.setAttribute("aria-disabled", "true");
@@ -421,75 +639,101 @@
       };
     }
 
-    function getBoundingBox() {
-      const xs = points.map((point) => point.x);
-      const ys = points.map((point) => point.y);
-      const padding = 24;
+    async function exportOutlinedCrop() {
+      const scene = panoramas[currentPanorama];
 
-      return {
-        left: Math.max(0, Math.floor(Math.min(...xs) - padding)),
-        top: Math.max(0, Math.floor(Math.min(...ys) - padding)),
-        right: Math.min(window.innerWidth, Math.ceil(Math.max(...xs) + padding)),
-        bottom: Math.min(window.innerHeight, Math.ceil(Math.max(...ys) + padding))
-      };
-    }
-
-    function getPannellumCanvas() {
-      return document.querySelector("#panorama canvas");
-    }
-
-    function exportOutlinedCrop() {
-      const sourceCanvas = getPannellumCanvas();
-
-      if (!sourceCanvas || !isClosed) {
+      if (!isClosed) {
         return;
       }
 
-      const scaleX = sourceCanvas.width / window.innerWidth;
-      const scaleY = sourceCanvas.height / window.innerHeight;
-      const box = getBoundingBox();
-      const width = box.right - box.left;
-      const height = box.bottom - box.top;
-      const output = document.createElement("canvas");
-      const outputContext = output.getContext("2d");
+      exportCrop.disabled = true;
+      exportCrop.textContent = "Exporting...";
 
-      output.width = Math.round(width * scaleX);
-      output.height = Math.round(height * scaleY);
-      outputContext.drawImage(
-        sourceCanvas,
-        Math.round(box.left * scaleX),
-        Math.round(box.top * scaleY),
-        output.width,
-        output.height,
-        0,
-        0,
-        output.width,
-        output.height
-      );
+      try {
+        const image = await loadSourceImage(scene);
+        const sourcePoints = points.map((point) => yawPitchToImagePoint(point, scene, image));
+        const box = getSourceBoundingBox(sourcePoints, image);
+        const width = Math.max(1, box.right - box.left);
+        const height = Math.max(1, box.bottom - box.top);
+        const output = document.createElement("canvas");
+        const outputContext = output.getContext("2d");
 
-      outputContext.save();
-      outputContext.scale(scaleX, scaleY);
-      outputContext.translate(-box.left, -box.top);
-      outputContext.lineWidth = 4;
-      outputContext.strokeStyle = "#ffeb3b";
-      outputContext.fillStyle = "rgb(255 235 59 / 16%)";
-      outputContext.beginPath();
-      outputContext.moveTo(points[0].x, points[0].y);
-      points.slice(1).forEach((point) => outputContext.lineTo(point.x, point.y));
-      outputContext.closePath();
-      outputContext.fill();
-      outputContext.stroke();
-      outputContext.restore();
+        output.width = width;
+        output.height = height;
 
-      const url = output.toDataURL("image/png");
-      downloadCrop.href = url;
-      downloadCrop.download = `panoreno-crop-${Date.now()}.png`;
-      downloadCrop.removeAttribute("aria-disabled");
-      downloadCrop.click();
+        outputContext.save();
+        outputContext.beginPath();
+        outputContext.moveTo(sourcePoints[0].x - box.left, sourcePoints[0].y - box.top);
+        sourcePoints.slice(1).forEach((point) => {
+          outputContext.lineTo(point.x - box.left, point.y - box.top);
+        });
+        outputContext.closePath();
+        outputContext.clip();
+        outputContext.drawImage(
+          image,
+          box.left,
+          box.top,
+          width,
+          height,
+          0,
+          0,
+          width,
+          height
+        );
+        outputContext.restore();
+
+        if (cropObjectUrl) {
+          URL.revokeObjectURL(cropObjectUrl);
+        }
+
+        cropObjectUrl = await canvasToPngUrl(output);
+        downloadCrop.href = cropObjectUrl;
+        downloadCrop.download = `panoreno-${currentPanorama}-transparent-crop-${Date.now()}.png`;
+        downloadCrop.removeAttribute("aria-disabled");
+
+        reviewPanel.hidden = false;
+        reviewFrame.style.aspectRatio = `${image.naturalWidth} / ${image.naturalHeight}`;
+        reviewFull.src = scene.src;
+        reviewCrop.src = cropObjectUrl;
+        reviewCrop.style.left = `${(box.left / image.naturalWidth) * 100}%`;
+        reviewCrop.style.top = `${(box.top / image.naturalHeight) * 100}%`;
+        reviewCrop.style.width = `${(width / image.naturalWidth) * 100}%`;
+        reviewCrop.style.height = `${(height / image.naturalHeight) * 100}%`;
+        setOpacityDisplays();
+
+        cropOutput.textContent = JSON.stringify({
+          source: scene.src,
+          image: {
+            width: image.naturalWidth,
+            height: image.naturalHeight
+          },
+          crop: {
+            x: box.left,
+            y: box.top,
+            width,
+            height
+          },
+          polygon: sourcePoints.map((point) => ({
+            x: Math.round(point.x),
+            y: Math.round(point.y),
+            yaw: Number(point.yaw.toFixed(3)),
+            pitch: Number(point.pitch.toFixed(3))
+          }))
+        }, null, 2);
+
+        downloadCrop.click();
+      } catch (error) {
+        cropOutput.textContent = error.message;
+        reviewPanel.hidden = false;
+      } finally {
+        exportCrop.textContent = "Export PNG";
+        updateAnnotationUi();
+      }
     }
 
     function loadPanorama(key) {
       const scene = panoramas[key];
+      currentPanorama = key;
 
       if (viewer) {
         viewer.destroy();
@@ -539,9 +783,17 @@
     });
     clearOutline.addEventListener("click", clearAnnotation);
     exportCrop.addEventListener("click", exportOutlinedCrop);
+    fullOpacity.addEventListener("input", setOpacityDisplays);
+    cropOpacity.addEventListener("input", setOpacityDisplays);
+    downloadCrop.addEventListener("click", (event) => {
+      if (!downloadCrop.href) {
+        event.preventDefault();
+      }
+    });
     window.addEventListener("resize", resizeDrawCanvas);
     window.setInterval(updateAnnotationUi, 300);
 
+    setOpacityDisplays();
     resizeDrawCanvas();
     loadPanorama("remodeled");
   </script>
