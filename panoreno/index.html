@@ -231,7 +231,8 @@
       white-space: pre-wrap;
     }
 
-    .review-panel {
+    .review-panel,
+    .model-input-panel {
       position: fixed;
       right: 16px;
       bottom: 18px;
@@ -248,7 +249,8 @@
       backdrop-filter: blur(14px);
     }
 
-    .review-panel h2 {
+    .review-panel h2,
+    .model-input-panel h2 {
       margin: 0 0 10px;
       font-size: 0.92rem;
       letter-spacing: 0;
@@ -322,6 +324,22 @@
       white-space: pre-wrap;
     }
 
+    .model-input-output {
+      box-sizing: border-box;
+      width: 100%;
+      max-height: calc(100vh - 120px);
+      margin: 0;
+      overflow: auto;
+      border: 1px solid rgb(255 255 255 / 12%);
+      border-radius: 6px;
+      padding: 10px;
+      color: rgb(255 255 255 / 78%);
+      background: rgb(0 0 0 / 32%);
+      font: 0.72rem ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
     @media (max-width: 680px) {
       .viewer-header {
         align-items: flex-start;
@@ -348,7 +366,8 @@
         width: auto;
       }
 
-      .review-panel {
+      .review-panel,
+      .model-input-panel {
         left: 12px;
         right: 12px;
         width: auto;
@@ -380,6 +399,7 @@
       <button type="button" id="clear-outline" disabled>Clear</button>
       <button type="button" id="export-crop" disabled>Export PNG</button>
       <button type="button" id="save-region" disabled>Save Region</button>
+      <button type="button" id="model-input-toggle">Model Input</button>
       <button type="button" id="export-pack" disabled>Export Pack</button>
       <a class="export-link" id="download-crop" aria-disabled="true">Download Crop</a>
       <a class="export-link" id="download-scribble" aria-disabled="true">Download Scribbles</a>
@@ -445,6 +465,11 @@
     <pre class="crop-output" id="crop-output"></pre>
   </aside>
 
+  <aside class="model-input-panel" id="model-input-panel" aria-label="Generated model input" hidden>
+    <h2>Model Input</h2>
+    <pre class="model-input-output" id="model-input-output"></pre>
+  </aside>
+
   <script>
     const panoramas = {
       original: {
@@ -486,6 +511,7 @@
     const clearOutline = document.querySelector("#clear-outline");
     const exportCrop = document.querySelector("#export-crop");
     const saveRegion = document.querySelector("#save-region");
+    const modelInputToggle = document.querySelector("#model-input-toggle");
     const exportPack = document.querySelector("#export-pack");
     const downloadCrop = document.querySelector("#download-crop");
     const downloadScribble = document.querySelector("#download-scribble");
@@ -502,6 +528,8 @@
     const reviewFull = document.querySelector("#review-full");
     const reviewCrop = document.querySelector("#review-crop");
     const reviewScribble = document.querySelector("#review-scribble");
+    const modelInputPanel = document.querySelector("#model-input-panel");
+    const modelInputOutput = document.querySelector("#model-input-output");
     const fullOpacity = document.querySelector("#full-opacity");
     const cropOpacity = document.querySelector("#crop-opacity");
     const fullOpacityValue = document.querySelector("#full-opacity-value");
@@ -509,6 +537,7 @@
     const cropOutput = document.querySelector("#crop-output");
     const colorButtons = document.querySelectorAll("[data-color]");
     const imageCache = {};
+    const regionGuideColors = ["#FF0000", "#0000FF", "#00FF00", "#FFFF00", "#FF00FF", "#00FFFF", "#000000", "#FFFFFF"];
 
     function clamp(value, min, max) {
       return Math.min(max, Math.max(min, value));
@@ -584,6 +613,105 @@
       return match ? match[1].toLowerCase() : "png";
     }
 
+    function getOneCallTargetSize(width, height) {
+      const targetWidth = Math.min(3840, Math.floor(width / 16) * 16);
+      const scaledHeight = Math.round((height * targetWidth) / width);
+      const targetHeight = Math.round(scaledHeight / 16) * 16;
+
+      return {
+        width: targetWidth,
+        height: targetHeight
+      };
+    }
+
+    function getOneCallPrompt(regions) {
+      const regionLines = regions.length > 0
+        ? regions.map((region, index) => {
+          const color = regionGuideColors[index % regionGuideColors.length];
+
+          return `- ${color} outlined region (${region.id}): ${region.prompt || ""}`;
+        }).join("\n")
+        : "- No saved regions yet.";
+
+      return `You are editing a bathroom panorama in one pass.
+
+Image 1 is the full panorama to edit.
+Image 2 is a transparent guidance overlay. It contains colored outlines for each editable region, plus any user scribbles inside those regions. The colored outlines and scribbles are instructions only; do not draw those colored marks in the final image.
+
+Use the provided mask for Image 1. Transparent pixels in the mask are editable. Opaque pixels must be preserved.
+
+General panorama goal:
+${generalPrompt.value.trim()}
+
+Region-specific instructions:
+${regionLines}
+
+Constraints:
+- Produce one complete edited panorama image.
+- Change only the transparent masked regions.
+- Preserve the camera perspective, room geometry, walls, floor, ceiling, lighting direction, and all opaque/unmasked content.
+- Match materials and lighting across the whole panorama so the result can replace Image 1.
+- Treat the guidance overlay as visual intent only. Do not include colored outlines, colored scribbles, labels, watermarks, or extra text in the final output.`;
+    }
+
+    async function getModelInputText() {
+      const scene = panoramas[currentPanorama];
+      const image = await loadSourceImage(scene);
+      const targetSize = getOneCallTargetSize(image.naturalWidth, image.naturalHeight);
+      const regions = savedRegions.map((region, index) => ({
+        id: region.metadata.id,
+        guideColor: regionGuideColors[index % regionGuideColors.length],
+        prompt: region.metadata.prompt,
+        crop: region.metadata.crop,
+        polygon: region.metadata.polygon,
+        scribbleStrokeCount: region.metadata.scribbles.length,
+        files: {
+          sourcePackCrop: `regions/${region.metadata.id}/crop-original.png`,
+          sourcePackCutout: `regions/${region.metadata.id}/crop-cutout.png`,
+          sourcePackMask: `regions/${region.metadata.id}/mask-edit-area.png`,
+          sourcePackScribbles: `regions/${region.metadata.id}/scribbles.png`
+        }
+      }));
+      const prompt = getOneCallPrompt(regions);
+
+      return JSON.stringify({
+        endpoint: "POST /v1/images/edits",
+        model: "gpt-image-2",
+        requestShape: "multipart/form-data",
+        formData: {
+          model: "gpt-image-2",
+          "image[0]": {
+            role: "full panorama edit target",
+            source: scene.src,
+            generatedFile: `source-${targetSize.width}x${targetSize.height}.png`
+          },
+          "image[1]": {
+            role: "transparent visual guidance overlay",
+            generatedFile: `region-guide-${targetSize.width}x${targetSize.height}.png`,
+            contains: "colored region outlines and user scribbles"
+          },
+          mask: {
+            role: "full panorama edit mask for image[0]",
+            generatedFile: `mask-edit-area-${targetSize.width}x${targetSize.height}.png`,
+            alphaMeaning: "transparent = editable; opaque = preserve"
+          },
+          quality: "high",
+          size: `${targetSize.width}x${targetSize.height}`,
+          output_format: "png",
+          prompt
+        },
+        sourceImage: {
+          originalWidth: image.naturalWidth,
+          originalHeight: image.naturalHeight,
+          generatedWidth: targetSize.width,
+          generatedHeight: targetSize.height,
+          resizeReason: "gpt-image-2 max edge is 3840px and dimensions should be multiples of 16"
+        },
+        savedRegionCount: regions.length,
+        regions
+      }, null, 2);
+    }
+
     async function fetchSourceBlob(scene) {
       const response = await fetch(scene.src);
 
@@ -630,6 +758,25 @@
       reviewScribble.style.opacity = cropOpacity.value;
       fullOpacityValue.value = `${Math.round(Number(fullOpacity.value) * 100)}%`;
       cropOpacityValue.value = `${Math.round(Number(cropOpacity.value) * 100)}%`;
+    }
+
+    async function toggleModelInputPanel() {
+      const shouldShow = modelInputPanel.hidden;
+
+      modelInputPanel.hidden = !shouldShow;
+      modelInputToggle.dataset.active = String(shouldShow);
+
+      if (!shouldShow) {
+        return;
+      }
+
+      modelInputOutput.textContent = "Building model input...";
+
+      try {
+        modelInputOutput.textContent = await getModelInputText();
+      } catch (error) {
+        modelInputOutput.textContent = error.message;
+      }
     }
 
     function syncViewerInteraction() {
@@ -774,6 +921,16 @@
         savedRegions = [];
         nextRegionNumber = 1;
         resetPackDownload();
+      }
+
+      if (!modelInputPanel.hidden) {
+        getModelInputText()
+          .then((text) => {
+            modelInputOutput.textContent = text;
+          })
+          .catch((error) => {
+            modelInputOutput.textContent = error.message;
+          });
       }
 
       syncViewerInteraction();
@@ -1082,6 +1239,7 @@
           generalPrompt: generalPrompt.value.trim(),
           regions: manifestRegions
         }, null, 2));
+        zip.file("one-call-model-input.json", await getModelInputText());
 
         if (packObjectUrl) {
           URL.revokeObjectURL(packObjectUrl);
@@ -1201,6 +1359,7 @@
     clearOutline.addEventListener("click", () => clearAnnotation());
     exportCrop.addEventListener("click", exportOutlinedCrop);
     saveRegion.addEventListener("click", saveCurrentRegion);
+    modelInputToggle.addEventListener("click", toggleModelInputPanel);
     exportPack.addEventListener("click", exportRegionPack);
     fullOpacity.addEventListener("input", setOpacityDisplays);
     cropOpacity.addEventListener("input", setOpacityDisplays);
