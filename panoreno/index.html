@@ -52,33 +52,11 @@
       position: fixed;
       top: 16px;
       left: 16px;
-      right: 16px;
       z-index: 5;
       display: flex;
       align-items: center;
-      justify-content: space-between;
       gap: 12px;
       pointer-events: none;
-    }
-
-    .brand {
-      max-width: min(420px, 52vw);
-      color: white;
-      text-shadow: 0 2px 14px rgb(0 0 0 / 72%);
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: clamp(1.25rem, 2.8vw, 2.35rem);
-      line-height: 1;
-      letter-spacing: 0;
-    }
-
-    .brand p {
-      margin: 6px 0 0;
-      color: rgb(255 255 255 / 76%);
-      font-size: clamp(0.78rem, 1.4vw, 0.95rem);
-      line-height: 1.35;
     }
 
     .image-switcher {
@@ -109,6 +87,91 @@
       background: #f4f1e8;
     }
 
+    .generation-panel {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 6;
+      width: min(390px, calc(100vw - 32px));
+      padding: 12px;
+      border: 1px solid rgb(255 255 255 / 18%);
+      border-radius: 8px;
+      color: white;
+      background: rgb(0 0 0 / 68%);
+      box-shadow: 0 18px 50px rgb(0 0 0 / 38%);
+      backdrop-filter: blur(14px);
+      pointer-events: auto;
+    }
+
+    .generation-controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .generation-controls input {
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid rgb(255 255 255 / 18%);
+      border-radius: 6px;
+      padding: 7px 9px;
+      color: white;
+      background: rgb(255 255 255 / 9%);
+      font: inherit;
+      font-size: 0.84rem;
+    }
+
+    .generation-controls input::file-selector-button,
+    .generation-controls button,
+    .fork-tree button,
+    .panel-toggle {
+      min-height: 34px;
+      border: 1px solid rgb(255 255 255 / 20%);
+      border-radius: 6px;
+      padding: 0 10px;
+      color: white;
+      background: rgb(255 255 255 / 10%);
+      font: inherit;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+
+    .generation-controls button:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .fork-tree {
+      display: grid;
+      gap: 5px;
+      margin-top: 10px;
+      max-height: 170px;
+      overflow: auto;
+    }
+
+    .fork-tree button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fork-tree button[aria-pressed="true"] {
+      color: #111;
+      background: #f4f1e8;
+    }
+
+    .generation-status {
+      min-height: 18px;
+      margin-top: 8px;
+      color: rgb(255 255 255 / 68%);
+      font-size: 0.76rem;
+      line-height: 1.35;
+    }
+
     .pnlm-controls-container {
       bottom: 18px;
     }
@@ -126,6 +189,36 @@
       background: rgb(0 0 0 / 68%);
       box-shadow: 0 18px 50px rgb(0 0 0 / 38%);
       backdrop-filter: blur(14px);
+    }
+
+    .annotation-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .annotation-topbar strong {
+      color: rgb(255 255 255 / 82%);
+      font-size: 0.88rem;
+    }
+
+    .annotation-panel.is-collapsed {
+      width: auto;
+    }
+
+    .annotation-panel.is-collapsed .annotation-topbar {
+      margin-bottom: 0;
+    }
+
+    .annotation-panel.is-collapsed .annotation-body {
+      display: none;
+    }
+
+    .annotation-body {
+      max-height: min(68vh, 620px);
+      overflow: auto;
     }
 
     .annotation-actions {
@@ -341,15 +434,6 @@
     }
 
     @media (max-width: 680px) {
-      .viewer-header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .brand {
-        max-width: 100%;
-      }
-
       .image-switcher {
         width: calc(100vw - 40px);
       }
@@ -363,6 +447,17 @@
         left: 12px;
         right: 12px;
         bottom: 12px;
+        width: auto;
+      }
+
+      .annotation-body {
+        max-height: 42vh;
+      }
+
+      .generation-panel {
+        top: 66px;
+        left: 12px;
+        right: 12px;
         width: auto;
       }
 
@@ -380,66 +475,78 @@
   <canvas id="draw-layer" aria-label="Outline drawing layer"></canvas>
 
   <header class="viewer-header">
-    <div class="brand">
-      <h1>Panoreno</h1>
-      <p>Panoramic renovations before and after.</p>
-    </div>
-
     <nav class="image-switcher" aria-label="Panorama image">
       <button type="button" data-panorama="original" aria-pressed="false">Original</button>
       <button type="button" data-panorama="remodeled" aria-pressed="true">Remodeled</button>
     </nav>
   </header>
 
-  <aside class="annotation-panel" aria-label="Panorama annotation tools">
-    <div class="annotation-actions">
-      <button type="button" id="draw-toggle">Draw Outline</button>
-      <button type="button" id="scribble-toggle" disabled>Draw Scribble</button>
-      <button type="button" id="close-outline" disabled>Close</button>
-      <button type="button" id="clear-outline" disabled>Clear</button>
-      <button type="button" id="export-crop" disabled>Export PNG</button>
-      <button type="button" id="save-region" disabled>Save Region</button>
-      <button type="button" id="model-input-toggle">Model Input</button>
-      <button type="button" id="export-pack" disabled>Export Pack</button>
-      <a class="export-link" id="download-crop" aria-disabled="true">Download Crop</a>
-      <a class="export-link" id="download-scribble" aria-disabled="true">Download Scribbles</a>
-      <a class="export-link" id="download-pack" aria-disabled="true">Download Pack</a>
+  <aside class="generation-panel" aria-label="Generation and version controls">
+    <div class="generation-controls">
+      <input id="upload-panorama" type="file" accept="image/*">
+      <input id="api-key-input" type="password" autocomplete="off" placeholder="OpenAI API key">
+      <button type="button" id="generate-edit" disabled>Generate</button>
+    </div>
+    <div class="fork-tree" id="fork-tree" aria-label="Panorama versions"></div>
+    <div class="generation-status" id="generation-status"></div>
+  </aside>
+
+  <aside class="annotation-panel" id="annotation-panel" aria-label="Panorama annotation tools">
+    <div class="annotation-topbar">
+      <strong>Prompts</strong>
+      <button type="button" class="panel-toggle" id="panel-toggle">Minimize</button>
     </div>
 
-    <div class="color-palette" aria-label="Scribble color">
-      <button type="button" data-color="#FF0000" style="--swatch: #FF0000" aria-label="Red" aria-pressed="true"></button>
-      <button type="button" data-color="#000000" style="--swatch: #000000" aria-label="Black" aria-pressed="false"></button>
-      <button type="button" data-color="#0000FF" style="--swatch: #0000FF" aria-label="Blue" aria-pressed="false"></button>
-      <button type="button" data-color="#00FF00" style="--swatch: #00FF00" aria-label="Green" aria-pressed="false"></button>
-      <button type="button" data-color="#FFFF00" style="--swatch: #FFFF00" aria-label="Yellow" aria-pressed="false"></button>
-      <button type="button" data-color="#FFFFFF" style="--swatch: #FFFFFF" aria-label="White" aria-pressed="false"></button>
-      <button type="button" data-color="#FF00FF" style="--swatch: #FF00FF" aria-label="Magenta" aria-pressed="false"></button>
-      <button type="button" data-color="#00FFFF" style="--swatch: #00FFFF" aria-label="Cyan" aria-pressed="false"></button>
+    <div class="annotation-body">
+      <div class="annotation-actions">
+        <button type="button" id="draw-toggle">Draw Outline</button>
+        <button type="button" id="scribble-toggle" disabled>Draw Scribble</button>
+        <button type="button" id="close-outline" disabled>Close</button>
+        <button type="button" id="clear-outline" disabled>Clear</button>
+        <button type="button" id="export-crop" disabled>Export PNG</button>
+        <button type="button" id="save-region" disabled>Save Region</button>
+        <button type="button" id="model-input-toggle">Model Input</button>
+        <button type="button" id="export-pack" disabled>Export Pack</button>
+        <a class="export-link" id="download-crop" aria-disabled="true">Download Crop</a>
+        <a class="export-link" id="download-scribble" aria-disabled="true">Download Scribbles</a>
+        <a class="export-link" id="download-pack" aria-disabled="true">Download Pack</a>
+      </div>
+
+      <div class="color-palette" aria-label="Scribble color">
+        <button type="button" data-color="#FF0000" style="--swatch: #FF0000" aria-label="Red" aria-pressed="true"></button>
+        <button type="button" data-color="#000000" style="--swatch: #000000" aria-label="Black" aria-pressed="false"></button>
+        <button type="button" data-color="#0000FF" style="--swatch: #0000FF" aria-label="Blue" aria-pressed="false"></button>
+        <button type="button" data-color="#00FF00" style="--swatch: #00FF00" aria-label="Green" aria-pressed="false"></button>
+        <button type="button" data-color="#FFFF00" style="--swatch: #FFFF00" aria-label="Yellow" aria-pressed="false"></button>
+        <button type="button" data-color="#FFFFFF" style="--swatch: #FFFFFF" aria-label="White" aria-pressed="false"></button>
+        <button type="button" data-color="#FF00FF" style="--swatch: #FF00FF" aria-label="Magenta" aria-pressed="false"></button>
+        <button type="button" data-color="#00FFFF" style="--swatch: #00FFFF" aria-label="Cyan" aria-pressed="false"></button>
+      </div>
+
+      <textarea id="general-prompt" placeholder="General prompt for the whole panorama"></textarea>
+      <textarea id="region-prompt" placeholder="Describe the change for this outlined area"></textarea>
+
+      <div class="annotation-readout">
+        <div>
+          Points
+          <strong id="point-count">0</strong>
+        </div>
+        <div>
+          View yaw
+          <strong id="view-yaw">0.0</strong>
+        </div>
+        <div>
+          View pitch
+          <strong id="view-pitch">0.0</strong>
+        </div>
+        <div>
+          Saved
+          <strong id="region-count">0</strong>
+        </div>
+      </div>
+
+      <pre class="coordinate-output" id="coordinate-output">[]</pre>
     </div>
-
-    <textarea id="general-prompt" placeholder="General prompt for the whole panorama"></textarea>
-    <textarea id="region-prompt" placeholder="Describe the change for this outlined area"></textarea>
-
-    <div class="annotation-readout">
-      <div>
-        Points
-        <strong id="point-count">0</strong>
-      </div>
-      <div>
-        View yaw
-        <strong id="view-yaw">0.0</strong>
-      </div>
-      <div>
-        View pitch
-        <strong id="view-pitch">0.0</strong>
-      </div>
-      <div>
-        Saved
-        <strong id="region-count">0</strong>
-      </div>
-    </div>
-
-    <pre class="coordinate-output" id="coordinate-output">[]</pre>
   </aside>
 
   <aside class="review-panel" id="review-panel" aria-label="Panorama crop verification" hidden>
@@ -471,25 +578,46 @@
   </aside>
 
   <script>
+    const baseSceneSettings = {
+      haov: 290,
+      vaov: 95,
+      vOffset: -5.5
+    };
+
     const panoramas = {
       original: {
         label: "Original",
         src: "assets/original.jpeg",
-        haov: 290,
-        vaov: 95,
-        vOffset: -5.5
+        ...baseSceneSettings
       },
       remodeled: {
         label: "Remodeled",
         src: "assets/remodeled.png",
-        haov: 290,
-        vaov: 95,
-        vOffset: -5.5
+        ...baseSceneSettings
       }
     };
 
+    const panoramaVersions = [
+      {
+        id: "original",
+        parentId: null,
+        label: "Original",
+        kind: "base",
+        createdAt: Date.now()
+      },
+      {
+        id: "remodeled",
+        parentId: "original",
+        label: "Remodeled",
+        kind: "base",
+        createdAt: Date.now()
+      }
+    ];
+
     let viewer;
     let currentPanorama = "remodeled";
+    let uploadedVersionNumber = 1;
+    let generatedVersionNumber = 1;
     let activeTool = "none";
     let isClosed = false;
     let points = [];
@@ -536,8 +664,118 @@
     const cropOpacityValue = document.querySelector("#crop-opacity-value");
     const cropOutput = document.querySelector("#crop-output");
     const colorButtons = document.querySelectorAll("[data-color]");
+    const uploadPanorama = document.querySelector("#upload-panorama");
+    const apiKeyInput = document.querySelector("#api-key-input");
+    const generateEdit = document.querySelector("#generate-edit");
+    const forkTree = document.querySelector("#fork-tree");
+    const generationStatus = document.querySelector("#generation-status");
+    const annotationPanel = document.querySelector("#annotation-panel");
+    const panelToggle = document.querySelector("#panel-toggle");
     const imageCache = {};
     const regionGuideColors = ["#FF0000", "#0000FF", "#00FF00", "#FFFF00", "#FF00FF", "#00FFFF", "#000000", "#FFFFFF"];
+
+    function getCurrentScene() {
+      return panoramas[currentPanorama];
+    }
+
+    function getVersion(versionId) {
+      return panoramaVersions.find((version) => version.id === versionId);
+    }
+
+    function getVersionDepth(versionId) {
+      let depth = 0;
+      let version = getVersion(versionId);
+
+      while (version && version.parentId) {
+        depth += 1;
+        version = getVersion(version.parentId);
+      }
+
+      return depth;
+    }
+
+    function getOrderedVersions() {
+      const children = new Map();
+      const roots = [];
+
+      panoramaVersions.forEach((version) => {
+        if (!version.parentId) {
+          roots.push(version);
+          return;
+        }
+
+        if (!children.has(version.parentId)) {
+          children.set(version.parentId, []);
+        }
+
+        children.get(version.parentId).push(version);
+      });
+
+      const ordered = [];
+      const visit = (version) => {
+        ordered.push(version);
+        (children.get(version.id) || []).forEach(visit);
+      };
+
+      roots.forEach(visit);
+
+      return ordered;
+    }
+
+    function setGenerationStatus(message, isError = false) {
+      generationStatus.textContent = message;
+      generationStatus.style.color = isError ? "#FF6B6B" : "rgb(255 255 255 / 68%)";
+    }
+
+    function updateGenerateButton() {
+      generateEdit.disabled = savedRegions.length === 0 || apiKeyInput.value.trim().length === 0;
+    }
+
+    function addPanoramaVersion({ label, src, parentId = currentPanorama, kind = "fork" }) {
+      const id = `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      panoramas[id] = {
+        label,
+        src,
+        ...baseSceneSettings
+      };
+
+      panoramaVersions.push({
+        id,
+        parentId,
+        label,
+        kind,
+        createdAt: Date.now()
+      });
+
+      renderVersionControls();
+
+      return id;
+    }
+
+    function renderVersionControls() {
+      document.querySelectorAll("[data-panorama]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.panorama === currentPanorama));
+      });
+
+      forkTree.innerHTML = "";
+
+      getOrderedVersions().forEach((version) => {
+        const depth = getVersionDepth(version.id);
+        const button = document.createElement("button");
+        const prefix = depth > 0 ? `${"  ".repeat(depth)}- ` : "";
+
+        button.type = "button";
+        button.textContent = `${prefix}${version.label}`;
+        button.title = version.parentId ? `${version.label} forked from ${panoramas[version.parentId]?.label || "previous version"}` : version.label;
+        button.style.paddingLeft = `${10 + depth * 16}px`;
+        button.setAttribute("aria-pressed", String(version.id === currentPanorama));
+        button.addEventListener("click", () => loadPanorama(version.id));
+        forkTree.appendChild(button);
+      });
+
+      updateGenerateButton();
+    }
 
     function clamp(value, min, max) {
       return Math.min(max, Math.max(min, value));
@@ -722,6 +960,232 @@ Constraints:
       return response.blob();
     }
 
+    function traceScaledPolygon(context, polygon, scaleX, scaleY) {
+      if (polygon.length === 0) {
+        return;
+      }
+
+      context.beginPath();
+      context.moveTo(polygon[0].x * scaleX, polygon[0].y * scaleY);
+
+      polygon.slice(1).forEach((point) => {
+        context.lineTo(point.x * scaleX, point.y * scaleY);
+      });
+
+      context.closePath();
+    }
+
+    function base64ToBlob(base64, type = "image/png") {
+      const bytes = atob(base64);
+      const chunks = [];
+      const chunkSize = 1024;
+
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        const slice = bytes.slice(offset, offset + chunkSize);
+        const numbers = new Array(slice.length);
+
+        for (let index = 0; index < slice.length; index += 1) {
+          numbers[index] = slice.charCodeAt(index);
+        }
+
+        chunks.push(new Uint8Array(numbers));
+      }
+
+      return new Blob(chunks, { type });
+    }
+
+    async function createOneCallEditAssets() {
+      const scene = getCurrentScene();
+      const image = await loadSourceImage(scene);
+      const targetSize = getOneCallTargetSize(image.naturalWidth, image.naturalHeight);
+      const scaleX = targetSize.width / image.naturalWidth;
+      const scaleY = targetSize.height / image.naturalHeight;
+      const sourceCanvas = document.createElement("canvas");
+      const maskCanvas = document.createElement("canvas");
+      const guideCanvas = document.createElement("canvas");
+      const canvases = [sourceCanvas, maskCanvas, guideCanvas];
+      const regions = savedRegions.map((region) => region.metadata);
+
+      canvases.forEach((canvas) => {
+        canvas.width = targetSize.width;
+        canvas.height = targetSize.height;
+      });
+
+      sourceCanvas
+        .getContext("2d")
+        .drawImage(image, 0, 0, targetSize.width, targetSize.height);
+
+      const maskContext = maskCanvas.getContext("2d");
+      maskContext.fillStyle = "#FFFFFF";
+      maskContext.fillRect(0, 0, targetSize.width, targetSize.height);
+      maskContext.globalCompositeOperation = "destination-out";
+      regions.forEach((region) => {
+        traceScaledPolygon(maskContext, region.polygon, scaleX, scaleY);
+        maskContext.fill();
+      });
+      maskContext.globalCompositeOperation = "source-over";
+
+      const guideContext = guideCanvas.getContext("2d");
+      const outlineWidth = Math.max(5, Math.round(targetSize.width / 760));
+      const scribbleWidth = Math.max(7, Math.round(targetSize.width / 560));
+
+      regions.forEach((region, index) => {
+        const color = regionGuideColors[index % regionGuideColors.length];
+
+        guideContext.save();
+        guideContext.lineJoin = "round";
+        guideContext.lineCap = "round";
+        guideContext.lineWidth = outlineWidth;
+        guideContext.strokeStyle = color;
+        traceScaledPolygon(guideContext, region.polygon, scaleX, scaleY);
+        guideContext.stroke();
+        guideContext.restore();
+
+        renderScribbles(
+          guideContext,
+          region.scribbles,
+          (point) => ({
+            x: point.x * scaleX,
+            y: point.y * scaleY
+          }),
+          scribbleWidth
+        );
+      });
+
+      const promptRegions = regions.map((region) => ({
+        id: region.id,
+        prompt: region.prompt
+      }));
+
+      return {
+        targetSize,
+        prompt: getOneCallPrompt(promptRegions),
+        blobs: {
+          source: await canvasToPngBlob(sourceCanvas),
+          guide: await canvasToPngBlob(guideCanvas),
+          mask: await canvasToPngBlob(maskCanvas)
+        }
+      };
+    }
+
+    async function requestImageEdit(assets, apiKey) {
+      const formData = new FormData();
+      const size = `${assets.targetSize.width}x${assets.targetSize.height}`;
+
+      formData.append("model", "gpt-image-2");
+      formData.append("image[]", assets.blobs.source, `source-${size}.png`);
+      formData.append("image[]", assets.blobs.guide, `region-guide-${size}.png`);
+      formData.append("mask", assets.blobs.mask, `mask-edit-area-${size}.png`);
+      formData.append("prompt", assets.prompt);
+      formData.append("quality", "high");
+      formData.append("size", size);
+      formData.append("output_format", "png");
+
+      const response = await fetch("https://api.openai.com/v1/images/edits", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: formData
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error?.message || `Image edit failed with HTTP ${response.status}`);
+      }
+
+      if (payload.data?.[0]?.b64_json) {
+        return base64ToBlob(payload.data[0].b64_json);
+      }
+
+      if (payload.data?.[0]?.url) {
+        const imageResponse = await fetch(payload.data[0].url);
+
+        if (!imageResponse.ok) {
+          throw new Error("Image edit succeeded, but the generated image could not be fetched");
+        }
+
+        return imageResponse.blob();
+      }
+
+      throw new Error("Image edit response did not include image data");
+    }
+
+    async function generateCurrentEdit() {
+      const apiKey = apiKeyInput.value.trim();
+      const parentId = currentPanorama;
+
+      if (!apiKey) {
+        setGenerationStatus("Enter an OpenAI API key before generating.", true);
+        updateGenerateButton();
+        return;
+      }
+
+      if (savedRegions.length === 0) {
+        setGenerationStatus("Save at least one outlined region before generating.", true);
+        updateGenerateButton();
+        return;
+      }
+
+      generateEdit.disabled = true;
+      generateEdit.textContent = "Generating...";
+      setGenerationStatus("Preparing edit assets...");
+
+      try {
+        const assets = await createOneCallEditAssets();
+        setGenerationStatus(`Generating ${assets.targetSize.width}x${assets.targetSize.height} edit...`);
+
+        const editedBlob = await requestImageEdit(assets, apiKey);
+        const editedUrl = URL.createObjectURL(editedBlob);
+        const parentLabel = panoramas[parentId].label;
+        const label = `${parentLabel} fork ${generatedVersionNumber}`;
+        const versionId = addPanoramaVersion({
+          label,
+          src: editedUrl,
+          parentId,
+          kind: "fork"
+        });
+
+        generatedVersionNumber += 1;
+        loadPanorama(versionId);
+        setGenerationStatus(`Generated ${label}.`);
+      } catch (error) {
+        setGenerationStatus(error.message, true);
+      } finally {
+        generateEdit.textContent = "Generate";
+        updateGenerateButton();
+      }
+    }
+
+    function handlePanoramaUpload(event) {
+      const file = event.target.files?.[0];
+
+      if (!file) {
+        return;
+      }
+
+      const src = URL.createObjectURL(file);
+      const rawLabel = file.name ? file.name.replace(/\.[^.]+$/, "") : `Upload ${uploadedVersionNumber}`;
+      const label = `Upload ${uploadedVersionNumber}: ${rawLabel}`;
+      const versionId = addPanoramaVersion({
+        label,
+        src,
+        parentId: null,
+        kind: "upload"
+      });
+
+      uploadedVersionNumber += 1;
+      loadPanorama(versionId);
+      setGenerationStatus(`Loaded ${label}.`);
+      uploadPanorama.value = "";
+    }
+
+    function setAnnotationCollapsed(isCollapsed) {
+      annotationPanel.classList.toggle("is-collapsed", isCollapsed);
+      panelToggle.textContent = isCollapsed ? "Expand" : "Minimize";
+      panelToggle.setAttribute("aria-expanded", String(!isCollapsed));
+    }
+
     function resetReview() {
       reviewPanel.hidden = true;
       reviewCrop.removeAttribute("src");
@@ -817,6 +1281,7 @@ Constraints:
       exportCrop.disabled = !isClosed;
       saveRegion.disabled = !isClosed;
       exportPack.disabled = savedRegions.length === 0;
+      updateGenerateButton();
       scribbleToggle.disabled = !isClosed;
       drawToggle.dataset.active = String(activeTool === "outline");
       scribbleToggle.dataset.active = String(activeTool === "scribble");
@@ -1261,6 +1726,12 @@ Constraints:
 
     function loadPanorama(key) {
       const scene = panoramas[key];
+
+      if (!scene) {
+        setGenerationStatus(`Unknown panorama version: ${key}`, true);
+        return;
+      }
+
       currentPanorama = key;
 
       if (viewer) {
@@ -1281,13 +1752,10 @@ Constraints:
         hfov: 100
       });
 
-      document.querySelectorAll("[data-panorama]").forEach((button) => {
-        button.setAttribute("aria-pressed", String(button.dataset.panorama === key));
-      });
-
       clearAnnotation({ clearSaved: true });
       activeTool = "none";
       syncViewerInteraction();
+      renderVersionControls();
       updateAnnotationUi();
     }
 
@@ -1361,6 +1829,12 @@ Constraints:
     saveRegion.addEventListener("click", saveCurrentRegion);
     modelInputToggle.addEventListener("click", toggleModelInputPanel);
     exportPack.addEventListener("click", exportRegionPack);
+    uploadPanorama.addEventListener("change", handlePanoramaUpload);
+    apiKeyInput.addEventListener("input", updateGenerateButton);
+    generateEdit.addEventListener("click", generateCurrentEdit);
+    panelToggle.addEventListener("click", () => {
+      setAnnotationCollapsed(!annotationPanel.classList.contains("is-collapsed"));
+    });
     fullOpacity.addEventListener("input", setOpacityDisplays);
     cropOpacity.addEventListener("input", setOpacityDisplays);
     downloadCrop.addEventListener("click", (event) => {
@@ -1391,6 +1865,7 @@ Constraints:
     window.setInterval(updateAnnotationUi, 300);
 
     setOpacityDisplays();
+    setAnnotationCollapsed(false);
     resizeDrawCanvas();
     loadPanorama("remodeled");
   </script>
