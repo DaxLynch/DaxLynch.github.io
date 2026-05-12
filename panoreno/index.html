@@ -630,6 +630,7 @@
     let cropObjectUrl;
     let scribbleObjectUrl;
     let packObjectUrl;
+    let isGenerating = false;
 
     const drawCanvas = document.querySelector("#draw-layer");
     const drawContext = drawCanvas.getContext("2d");
@@ -728,7 +729,7 @@
     }
 
     function updateGenerateButton() {
-      generateEdit.disabled = savedRegions.length === 0 || apiKeyInput.value.trim().length === 0;
+      generateEdit.disabled = isGenerating;
     }
 
     function addPanoramaVersion({ label, src, parentId = currentPanorama, kind = "fork" }) {
@@ -896,7 +897,8 @@ Constraints:
       const scene = panoramas[currentPanorama];
       const image = await loadSourceImage(scene);
       const targetSize = getOneCallTargetSize(image.naturalWidth, image.naturalHeight);
-      const regions = savedRegions.map((region, index) => ({
+      const regionsForInput = await getRegionsForGeneration();
+      const regions = regionsForInput.map((region, index) => ({
         id: region.metadata.id,
         guideColor: regionGuideColors[index % regionGuideColors.length],
         prompt: region.metadata.prompt,
@@ -994,7 +996,17 @@ Constraints:
       return new Blob(chunks, { type });
     }
 
-    async function createOneCallEditAssets() {
+    async function getRegionsForGeneration() {
+      const regions = [...savedRegions];
+
+      if (isClosed) {
+        regions.push(await buildCurrentRegionExport(`current-region-${Date.now()}`));
+      }
+
+      return regions;
+    }
+
+    async function createOneCallEditAssets(regionsForEdit) {
       const scene = getCurrentScene();
       const image = await loadSourceImage(scene);
       const targetSize = getOneCallTargetSize(image.naturalWidth, image.naturalHeight);
@@ -1004,7 +1016,7 @@ Constraints:
       const maskCanvas = document.createElement("canvas");
       const guideCanvas = document.createElement("canvas");
       const canvases = [sourceCanvas, maskCanvas, guideCanvas];
-      const regions = savedRegions.map((region) => region.metadata);
+      const regions = regionsForEdit.map((region) => region.metadata);
 
       canvases.forEach((canvas) => {
         canvas.width = targetSize.width;
@@ -1121,18 +1133,20 @@ Constraints:
         return;
       }
 
-      if (savedRegions.length === 0) {
-        setGenerationStatus("Save at least one outlined region before generating.", true);
+      if (savedRegions.length === 0 && !isClosed) {
+        setGenerationStatus("Close an outline, or save at least one region, before generating.", true);
         updateGenerateButton();
         return;
       }
 
-      generateEdit.disabled = true;
+      isGenerating = true;
+      updateGenerateButton();
       generateEdit.textContent = "Generating...";
       setGenerationStatus("Preparing edit assets...");
 
       try {
-        const assets = await createOneCallEditAssets();
+        const regionsForEdit = await getRegionsForGeneration();
+        const assets = await createOneCallEditAssets(regionsForEdit);
         setGenerationStatus(`Generating ${assets.targetSize.width}x${assets.targetSize.height} edit...`);
 
         const editedBlob = await requestImageEdit(assets, apiKey);
@@ -1152,6 +1166,7 @@ Constraints:
       } catch (error) {
         setGenerationStatus(error.message, true);
       } finally {
+        isGenerating = false;
         generateEdit.textContent = "Generate";
         updateGenerateButton();
       }
