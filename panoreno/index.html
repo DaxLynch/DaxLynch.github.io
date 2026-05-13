@@ -61,20 +61,50 @@
     }
 
     .viewer-controls {
+      box-sizing: border-box;
       display: grid;
       gap: 6px;
+      padding: 6px;
+      border: 1px solid rgb(255 255 255 / 20%);
+      border-radius: 8px;
+      background: rgb(0 0 0 / 58%);
+      backdrop-filter: blur(14px);
       pointer-events: auto;
+    }
+
+    .viewer-controls-topbar,
+    .generation-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .viewer-controls-topbar strong,
+    .generation-topbar strong {
+      min-width: 0;
+      overflow: hidden;
+      color: rgb(255 255 255 / 82%);
+      font-size: 0.84rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .viewer-controls-body {
+      display: grid;
+      gap: 6px;
+    }
+
+    .viewer-controls.is-collapsed .viewer-controls-body,
+    .generation-panel.is-collapsed .generation-body {
+      display: none;
     }
 
     .room-switcher,
     .image-switcher {
       display: flex;
       gap: 4px;
-      padding: 4px;
-      border: 1px solid rgb(255 255 255 / 20%);
-      border-radius: 8px;
-      background: rgb(0 0 0 / 58%);
-      backdrop-filter: blur(14px);
+      padding: 0;
       pointer-events: auto;
     }
 
@@ -99,6 +129,7 @@
 
     .generation-panel {
       position: fixed;
+      box-sizing: border-box;
       top: 16px;
       right: 16px;
       z-index: 6;
@@ -111,6 +142,10 @@
       box-shadow: 0 18px 50px rgb(0 0 0 / 38%);
       backdrop-filter: blur(14px);
       pointer-events: auto;
+    }
+
+    .generation-body {
+      margin-top: 10px;
     }
 
     .generation-controls {
@@ -135,6 +170,7 @@
     .generation-controls input::file-selector-button,
     .generation-controls button,
     .fork-tree button,
+    .fork-tree a,
     .panel-toggle {
       min-height: 34px;
       border: 1px solid rgb(255 255 255 / 20%);
@@ -145,6 +181,15 @@
       font: inherit;
       font-size: 0.84rem;
       cursor: pointer;
+    }
+
+    .fork-tree a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-width: 86px;
+      text-decoration: none;
     }
 
     .generation-controls button:disabled {
@@ -158,6 +203,13 @@
       margin-top: 10px;
       max-height: 170px;
       overflow: auto;
+    }
+
+    .fork-tree-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 5px;
+      align-items: center;
     }
 
     .fork-tree button {
@@ -489,7 +541,7 @@
     @media (max-width: 680px) {
       .room-switcher,
       .image-switcher {
-        width: calc(100vw - 40px);
+        width: 100%;
       }
 
       .room-switcher button,
@@ -516,6 +568,19 @@
         width: auto;
       }
 
+      .viewer-controls:not(.is-collapsed) {
+        width: calc(100vw - 40px);
+      }
+
+      .viewer-controls.is-collapsed,
+      .generation-panel.is-collapsed {
+        width: auto;
+      }
+
+      .generation-panel.is-collapsed {
+        left: auto;
+      }
+
       .review-panel,
       .model-input-panel,
       .fov-panel {
@@ -535,28 +600,42 @@
   <canvas id="draw-layer" aria-label="Outline drawing layer"></canvas>
 
   <header class="viewer-header">
-    <div class="viewer-controls">
-      <nav class="room-switcher" aria-label="Room">
-        <button type="button" data-room="bathroom" aria-pressed="true">Bathroom</button>
-        <button type="button" data-room="living-room" aria-pressed="false">Living Room</button>
-      </nav>
+    <div class="viewer-controls" id="viewer-controls">
+      <div class="viewer-controls-topbar">
+        <strong id="viewer-controls-title">Bathroom · Remodeled</strong>
+        <button type="button" class="panel-toggle" id="viewer-controls-toggle">Minimize</button>
+      </div>
 
-      <nav class="image-switcher" aria-label="Panorama image">
-        <button type="button" data-variant="original" aria-pressed="false">Original</button>
-        <button type="button" data-variant="remodeled" aria-pressed="true">Remodeled</button>
-      </nav>
+      <div class="viewer-controls-body">
+        <nav class="room-switcher" aria-label="Room">
+          <button type="button" data-room="bathroom" aria-pressed="true">Bathroom</button>
+          <button type="button" data-room="living-room" aria-pressed="false">Living Room</button>
+        </nav>
+
+        <nav class="image-switcher" aria-label="Panorama image">
+          <button type="button" data-variant="original" aria-pressed="false">Original</button>
+          <button type="button" data-variant="remodeled" aria-pressed="true">Remodeled</button>
+        </nav>
+      </div>
     </div>
   </header>
 
-  <aside class="generation-panel" aria-label="Generation and version controls">
-    <div class="generation-controls">
-      <input id="upload-panorama" type="file" accept="image/*">
-      <input id="api-key-input" type="password" autocomplete="off" placeholder="OpenAI API key">
-      <button type="button" id="generate-edit" disabled>Generate</button>
+  <aside class="generation-panel" id="generation-panel" aria-label="Generation and version controls">
+    <div class="generation-topbar">
+      <strong>Versions</strong>
+      <button type="button" class="panel-toggle" id="generation-panel-toggle">Minimize</button>
     </div>
-    <div class="generation-mode" id="generation-mode"></div>
-    <div class="fork-tree" id="fork-tree" aria-label="Panorama versions"></div>
-    <div class="generation-status" id="generation-status"></div>
+
+    <div class="generation-body">
+      <div class="generation-controls">
+        <input id="upload-panorama" type="file" accept="image/*">
+        <input id="api-key-input" type="password" autocomplete="off" placeholder="OpenAI API key">
+        <button type="button" id="generate-edit" disabled>Generate</button>
+      </div>
+      <div class="generation-mode" id="generation-mode"></div>
+      <div class="fork-tree" id="fork-tree" aria-label="Panorama versions"></div>
+      <div class="generation-status" id="generation-status"></div>
+    </div>
   </aside>
 
   <aside class="annotation-panel" id="annotation-panel" aria-label="Panorama annotation tools">
@@ -828,6 +907,11 @@
     const forkTree = document.querySelector("#fork-tree");
     const generationMode = document.querySelector("#generation-mode");
     const generationStatus = document.querySelector("#generation-status");
+    const generationPanel = document.querySelector("#generation-panel");
+    const generationPanelToggle = document.querySelector("#generation-panel-toggle");
+    const viewerControls = document.querySelector("#viewer-controls");
+    const viewerControlsTitle = document.querySelector("#viewer-controls-title");
+    const viewerControlsToggle = document.querySelector("#viewer-controls-toggle");
     const annotationPanel = document.querySelector("#annotation-panel");
     const panelToggle = document.querySelector("#panel-toggle");
     const imageCache = {};
@@ -837,6 +921,49 @@
 
     function getCurrentScene() {
       return panoramas[currentPanorama];
+    }
+
+    function isMobileViewport() {
+      return window.matchMedia("(max-width: 680px)").matches;
+    }
+
+    function getCurrentRoomLabel() {
+      return roomPanoramas[currentRoom]?.label || "Room";
+    }
+
+    function getCurrentVariantLabel() {
+      const scene = getCurrentScene();
+
+      if (scene?.variant === "generated") {
+        return "Generated";
+      }
+
+      return currentVariant === "original" ? "Original" : "Remodeled";
+    }
+
+    function updateViewerControlsTitle() {
+      viewerControlsTitle.textContent = `${getCurrentRoomLabel()} · ${getCurrentVariantLabel()}`;
+    }
+
+    function setViewerControlsCollapsed(isCollapsed) {
+      viewerControls.classList.toggle("is-collapsed", isCollapsed);
+      viewerControlsToggle.textContent = isCollapsed ? "Expand" : "Minimize";
+      viewerControlsToggle.setAttribute("aria-expanded", String(!isCollapsed));
+      updateViewerControlsTitle();
+    }
+
+    function setGenerationCollapsed(isCollapsed) {
+      generationPanel.classList.toggle("is-collapsed", isCollapsed);
+      generationPanelToggle.textContent = isCollapsed ? "Expand" : "Minimize";
+      generationPanelToggle.setAttribute("aria-expanded", String(!isCollapsed));
+    }
+
+    function sanitizeFileName(value) {
+      return value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 80) || "panoreno-generated";
     }
 
     function cloneRegion(region) {
@@ -1010,12 +1137,17 @@
         button.setAttribute("aria-pressed", String(button.dataset.variant === currentVariant));
       });
 
+      updateViewerControlsTitle();
       forkTree.innerHTML = "";
 
       getOrderedVersions().forEach((version) => {
         const depth = getVersionDepth(version.id);
+        const row = document.createElement("div");
         const button = document.createElement("button");
         const prefix = depth > 0 ? `${"  ".repeat(depth)}- ` : "";
+        const scene = panoramas[version.id];
+
+        row.className = "fork-tree-row";
 
         button.type = "button";
         button.textContent = `${prefix}${version.label}`;
@@ -1023,7 +1155,21 @@
         button.style.paddingLeft = `${10 + depth * 16}px`;
         button.setAttribute("aria-pressed", String(version.id === currentPanorama));
         button.addEventListener("click", () => loadPanorama(version.id));
-        forkTree.appendChild(button);
+        row.appendChild(button);
+
+        if (version.kind === "fork" && scene?.src) {
+          const downloadLink = document.createElement("a");
+
+          downloadLink.href = scene.src;
+          downloadLink.download = `${sanitizeFileName(version.label)}.png`;
+          downloadLink.textContent = "Download";
+          downloadLink.addEventListener("click", (event) => {
+            event.stopPropagation();
+          });
+          row.appendChild(downloadLink);
+        }
+
+        forkTree.appendChild(row);
       });
 
       updateGenerateButton();
@@ -2536,6 +2682,12 @@ Constraints:
     uploadPanorama.addEventListener("change", handlePanoramaUpload);
     apiKeyInput.addEventListener("input", updateGenerateButton);
     generateEdit.addEventListener("click", generateCurrentEdit);
+    generationPanelToggle.addEventListener("click", () => {
+      setGenerationCollapsed(!generationPanel.classList.contains("is-collapsed"));
+    });
+    viewerControlsToggle.addEventListener("click", () => {
+      setViewerControlsCollapsed(!viewerControls.classList.contains("is-collapsed"));
+    });
     panelToggle.addEventListener("click", () => {
       setAnnotationCollapsed(!annotationPanel.classList.contains("is-collapsed"));
     });
@@ -2599,6 +2751,8 @@ Constraints:
 
     setOpacityDisplays();
     configureGenerationMode();
+    setViewerControlsCollapsed(isMobileViewport());
+    setGenerationCollapsed(isMobileViewport());
     setAnnotationCollapsed(false);
     resizeDrawCanvas();
     loadPanorama("remodeled");
