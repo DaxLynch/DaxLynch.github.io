@@ -1,0 +1,13 @@
+name = "panoreno-api"
+main = "worker.js"
+compatibility_date = "2026-05-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://daxlynch.github.io,http://localhost:8000,http://127.0.0.1:8000"
+MAX_GENERATIONS = "5"
+MAX_REQUEST_BYTES = "95000000"
+
+[[kv_namespaces]]
+binding = "PANORENO_LIMITS"
+id = "replace-with-production-kv-id"
+preview_id = "replace-with-preview-kv-id"

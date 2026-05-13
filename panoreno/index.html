@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="config.js"></script>
 
   <style>
     :root {
@@ -169,6 +170,14 @@
       margin-top: 8px;
       color: rgb(255 255 255 / 68%);
       font-size: 0.76rem;
+      line-height: 1.35;
+    }
+
+    .generation-mode {
+      min-height: 17px;
+      margin-top: 8px;
+      color: rgb(255 255 255 / 58%);
+      font-size: 0.74rem;
       line-height: 1.35;
     }
 
@@ -487,6 +496,7 @@
       <input id="api-key-input" type="password" autocomplete="off" placeholder="OpenAI API key">
       <button type="button" id="generate-edit" disabled>Generate</button>
     </div>
+    <div class="generation-mode" id="generation-mode"></div>
     <div class="fork-tree" id="fork-tree" aria-label="Panorama versions"></div>
     <div class="generation-status" id="generation-status"></div>
   </aside>
@@ -583,6 +593,8 @@
       vaov: 95,
       vOffset: -5.5
     };
+    const generationProxyUrl = (window.PANORENO_GENERATION_PROXY_URL || "").trim().replace(/\/$/, "");
+    const publicGenerationLimit = 5;
 
     const panoramas = {
       original: {
@@ -669,6 +681,7 @@
     const apiKeyInput = document.querySelector("#api-key-input");
     const generateEdit = document.querySelector("#generate-edit");
     const forkTree = document.querySelector("#fork-tree");
+    const generationMode = document.querySelector("#generation-mode");
     const generationStatus = document.querySelector("#generation-status");
     const annotationPanel = document.querySelector("#annotation-panel");
     const panelToggle = document.querySelector("#panel-toggle");
@@ -730,6 +743,42 @@
 
     function updateGenerateButton() {
       generateEdit.disabled = isGenerating;
+    }
+
+    function isHostedGenerationConfigured() {
+      return generationProxyUrl.length > 0;
+    }
+
+    function configureGenerationMode() {
+      if (isHostedGenerationConfigured()) {
+        apiKeyInput.hidden = true;
+        apiKeyInput.value = "";
+        generationMode.textContent = `Public demo mode: ${publicGenerationLimit} generations per visitor.`;
+        refreshHostedGenerationUsage();
+        return;
+      }
+
+      apiKeyInput.hidden = false;
+      generationMode.textContent = "Local mode: enter your own OpenAI key to generate.";
+    }
+
+    async function refreshHostedGenerationUsage() {
+      if (!isHostedGenerationConfigured()) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${generationProxyUrl}/usage`);
+
+        if (!response.ok) {
+          return;
+        }
+
+        const usage = await response.json();
+        generationMode.textContent = `Public demo mode: ${usage.remaining}/${usage.limit} hosted generations remaining.`;
+      } catch {
+        generationMode.textContent = `Public demo mode: ${publicGenerationLimit} generations per visitor.`;
+      }
     }
 
     function addPanoramaVersion({ label, src, parentId = currentPanorama, kind = "fork" }) {
@@ -1080,7 +1129,7 @@ Constraints:
       };
     }
 
-    async function requestImageEdit(assets, apiKey) {
+    function createImageEditFormData(assets) {
       const formData = new FormData();
       const size = `${assets.targetSize.width}x${assets.targetSize.height}`;
 
@@ -1093,13 +1142,23 @@ Constraints:
       formData.append("size", size);
       formData.append("output_format", "png");
 
-      const response = await fetch("https://api.openai.com/v1/images/edits", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`
-        },
-        body: formData
-      });
+      return formData;
+    }
+
+    async function requestImageEdit(assets, apiKey) {
+      const formData = createImageEditFormData(assets);
+      const response = isHostedGenerationConfigured()
+        ? await fetch(`${generationProxyUrl}/edit`, {
+          method: "POST",
+          body: formData
+        })
+        : await fetch("https://api.openai.com/v1/images/edits", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`
+          },
+          body: formData
+        });
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
@@ -1107,7 +1166,11 @@ Constraints:
       }
 
       if (payload.data?.[0]?.b64_json) {
-        return base64ToBlob(payload.data[0].b64_json);
+        return {
+          blob: base64ToBlob(payload.data[0].b64_json),
+          limit: response.headers.get("x-panoreno-limit"),
+          remaining: response.headers.get("x-panoreno-remaining")
+        };
       }
 
       if (payload.data?.[0]?.url) {
@@ -1117,7 +1180,11 @@ Constraints:
           throw new Error("Image edit succeeded, but the generated image could not be fetched");
         }
 
-        return imageResponse.blob();
+        return {
+          blob: await imageResponse.blob(),
+          limit: response.headers.get("x-panoreno-limit"),
+          remaining: response.headers.get("x-panoreno-remaining")
+        };
       }
 
       throw new Error("Image edit response did not include image data");
@@ -1127,7 +1194,7 @@ Constraints:
       const apiKey = apiKeyInput.value.trim();
       const parentId = currentPanorama;
 
-      if (!apiKey) {
+      if (!isHostedGenerationConfigured() && !apiKey) {
         setGenerationStatus("Enter an OpenAI API key before generating.", true);
         updateGenerateButton();
         return;
@@ -1149,7 +1216,8 @@ Constraints:
         const assets = await createOneCallEditAssets(regionsForEdit);
         setGenerationStatus(`Generating ${assets.targetSize.width}x${assets.targetSize.height} edit...`);
 
-        const editedBlob = await requestImageEdit(assets, apiKey);
+        const result = await requestImageEdit(assets, apiKey);
+        const editedBlob = result.blob;
         const editedUrl = URL.createObjectURL(editedBlob);
         const parentLabel = panoramas[parentId].label;
         const label = `${parentLabel} fork ${generatedVersionNumber}`;
@@ -1162,7 +1230,12 @@ Constraints:
 
         generatedVersionNumber += 1;
         loadPanorama(versionId);
-        setGenerationStatus(`Generated ${label}.`);
+        if (result.remaining !== null && result.limit !== null) {
+          generationMode.textContent = `Public demo mode: ${result.remaining}/${result.limit} hosted generations remaining.`;
+        }
+        setGenerationStatus(result.remaining === null
+          ? `Generated ${label}.`
+          : `Generated ${label}. ${result.remaining} hosted generations remaining.`);
       } catch (error) {
         setGenerationStatus(error.message, true);
       } finally {
@@ -1880,6 +1953,7 @@ Constraints:
     window.setInterval(updateAnnotationUi, 300);
 
     setOpacityDisplays();
+    configureGenerationMode();
     setAnnotationCollapsed(false);
     resizeDrawCanvas();
     loadPanorama("remodeled");

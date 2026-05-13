@@ -1,0 +1,1 @@
+window.PANORENO_GENERATION_PROXY_URL = "";
