@@ -973,6 +973,36 @@
       };
     }
 
+    function cloneEditablePoint(point) {
+      const screenPoint = yawPitchToScreenPoint(point);
+
+      return {
+        x: screenPoint?.x ?? point.x,
+        y: screenPoint?.y ?? point.y,
+        yaw: Number(point.yaw),
+        pitch: Number(point.pitch)
+      };
+    }
+
+    function cloneEditableStrokes(strokes = []) {
+      return strokes.map((stroke) => ({
+        color: stroke.color,
+        points: stroke.points.map(cloneEditablePoint)
+      }));
+    }
+
+    function getSelectedRegion() {
+      if (!selectedRegionId) {
+        return undefined;
+      }
+
+      return savedRegions.find((region) => region.metadata.id === selectedRegionId);
+    }
+
+    function isEditingSavedRegion() {
+      return Boolean(selectedRegionId && isClosed && points.length >= 3);
+    }
+
     function saveAnnotationState(versionId = currentPanorama, regions = savedRegions) {
       annotationStateByPanorama[versionId] = {
         savedRegions: regions.map(cloneRegion),
@@ -1011,7 +1041,17 @@
       nextRegionNumber = state.nextRegionNumber;
 
       const selectedRegion = savedRegions.find((region) => region.metadata.id === selectedRegionId);
-      regionPrompt.value = selectedRegion ? selectedRegion.metadata.prompt || "" : "";
+
+      if (selectedRegion) {
+        points = selectedRegion.metadata.polygon.map(cloneEditablePoint);
+        scribbleStrokes = cloneEditableStrokes(selectedRegion.metadata.scribbles);
+        isClosed = true;
+        regionPrompt.value = selectedRegion.metadata.prompt || "";
+        return;
+      }
+
+      selectedRegionId = undefined;
+      regionPrompt.value = "";
     }
 
     function getVersion(versionId) {
@@ -1508,8 +1548,18 @@ Constraints:
       return new Blob(chunks, { type });
     }
 
-    async function getRegionsForGeneration() {
+    async function getRegionsForGeneration({ materializeActive = false } = {}) {
       const regions = [...savedRegions];
+
+      if (isEditingSavedRegion()) {
+        if (materializeActive) {
+          await refreshSelectedRegionExport();
+        } else {
+          syncSelectedRegionFromActive({ refresh: false });
+        }
+
+        return [...savedRegions];
+      }
 
       if (isClosed) {
         regions.push(await buildCurrentRegionExport(`current-region-${Date.now()}`));
@@ -1568,10 +1618,14 @@ Constraints:
         renderScribbles(
           guideContext,
           region.scribbles,
-          (point) => ({
-            x: point.x * scaleX,
-            y: point.y * scaleY
-          }),
+          (point) => {
+            const imagePoint = yawPitchToImagePoint(point, scene, image);
+
+            return {
+              x: imagePoint.x * scaleX,
+              y: imagePoint.y * scaleY
+            };
+          },
           scribbleWidth
         );
       });
@@ -1675,7 +1729,7 @@ Constraints:
       setGenerationStatus("Preparing edit assets...");
 
       try {
-        const regionsForEdit = await getRegionsForGeneration();
+        const regionsForEdit = await getRegionsForGeneration({ materializeActive: true });
         const assets = await createOneCallEditAssets(regionsForEdit);
         setGenerationStatus(`Generating ${assets.targetSize.width}x${assets.targetSize.height} edit...`);
 
@@ -1825,19 +1879,21 @@ Constraints:
     }
 
     function updateAnnotationUi() {
-      const hasDraftOutline = points.length > 0 || activeTool === "outline";
+      const isSavedRegionActive = isEditingSavedRegion();
+      const hasDraftOutline = !isSavedRegionActive && (points.length > 0 || activeTool === "outline");
+      const hasClosedOutline = isClosed && points.length >= 3;
       const canDelete = hasDraftOutline || Boolean(selectedRegionId);
 
       pointCount.textContent = points.length;
       regionCount.textContent = savedRegions.length;
       closeOutline.disabled = true;
       clearOutline.disabled = !canDelete;
-      exportCrop.disabled = !isClosed;
-      saveRegion.disabled = !isClosed;
+      exportCrop.disabled = !hasClosedOutline;
+      saveRegion.disabled = !hasClosedOutline;
       exportPack.disabled = savedRegions.length === 0;
       updateGenerateButton();
-      scribbleToggle.disabled = !isClosed;
-      drawToggle.disabled = hasDraftOutline || activeTool === "scribble";
+      scribbleToggle.disabled = !hasClosedOutline;
+      drawToggle.disabled = hasDraftOutline || isSavedRegionActive || activeTool === "scribble";
       drawToggle.dataset.active = String(activeTool === "outline");
       scribbleToggle.dataset.active = String(activeTool === "scribble");
       drawToggle.textContent = activeTool === "outline" ? "Drawing..." : "Draw Outline";
@@ -2004,6 +2060,10 @@ Constraints:
 
     function renderSavedRegions() {
       savedRegions.forEach((region, index) => {
+        if (region.metadata.id === selectedRegionId && isEditingSavedRegion()) {
+          return;
+        }
+
         const color = regionGuideColors[index % regionGuideColors.length];
         const screenPoints = getProjectedPoints(region.metadata.polygon);
         const isSelected = region.metadata.id === selectedRegionId;
@@ -2044,12 +2104,42 @@ Constraints:
         });
     }
 
+    function syncSelectedRegionFromActive({ refresh = true } = {}) {
+      const selectedRegion = getSelectedRegion();
+
+      if (!selectedRegion || !isEditingSavedRegion()) {
+        return;
+      }
+
+      selectedRegion.metadata.prompt = regionPrompt.value.trim();
+      selectedRegion.metadata.scribbles = scribbleStrokes.map((stroke) => ({
+        color: stroke.color,
+        points: stroke.points.map((point) => ({
+          x: point.x,
+          y: point.y,
+          yaw: Number(point.yaw),
+          pitch: Number(point.pitch)
+        }))
+      }));
+      resetPackDownload();
+      saveAnnotationState();
+
+      if (refresh) {
+        refreshOpenModelInput();
+      }
+    }
+
     function selectSavedRegion(region) {
+      syncSelectedRegionFromActive({ refresh: false });
       selectedRegionId = region.metadata.id;
+      points = region.metadata.polygon.map(cloneEditablePoint);
+      scribbleStrokes = cloneEditableStrokes(region.metadata.scribbles);
+      currentStroke = undefined;
+      isClosed = true;
       regionPrompt.value = region.metadata.prompt || "";
       activeTool = "none";
       syncViewerInteraction();
-      setGenerationStatus(`Selected ${region.metadata.id}. Edit the region prompt below.`);
+      setGenerationStatus(`Selected ${region.metadata.id}. Edit its prompt or add scribbles.`);
       saveAnnotationState();
       renderOutline();
       refreshOpenModelInput();
@@ -2132,7 +2222,7 @@ Constraints:
     }
 
     function deleteSelectedRegionOrDraft() {
-      if (points.length > 0 || activeTool === "outline") {
+      if (!isEditingSavedRegion() && (points.length > 0 || activeTool === "outline")) {
         resetDraftOutline();
         syncViewerInteraction();
         renderOutline();
@@ -2148,6 +2238,8 @@ Constraints:
       savedRegions = savedRegions.filter((region) => region.metadata.id !== selectedRegionId);
       selectedRegionId = undefined;
       regionPrompt.value = "";
+      resetDraftOutline();
+      syncViewerInteraction();
       resetPackDownload();
       saveAnnotationState();
       renderOutline();
@@ -2415,6 +2507,28 @@ Constraints:
       };
     }
 
+    async function refreshSelectedRegionExport() {
+      const selectedRegion = getSelectedRegion();
+
+      if (!selectedRegion || !isEditingSavedRegion()) {
+        return;
+      }
+
+      const updatedRegion = await buildCurrentRegionExport(selectedRegion.metadata.id);
+      const regionIndex = savedRegions.findIndex((region) => region.metadata.id === selectedRegion.metadata.id);
+
+      if (regionIndex === -1) {
+        return;
+      }
+
+      savedRegions[regionIndex] = updatedRegion;
+      selectedRegionId = updatedRegion.metadata.id;
+      points = updatedRegion.metadata.polygon.map(cloneEditablePoint);
+      scribbleStrokes = cloneEditableStrokes(updatedRegion.metadata.scribbles);
+      isClosed = true;
+      saveAnnotationState();
+    }
+
     function showRegionExport(region) {
       const scene = panoramas[region.metadata.sceneKey];
       const { image, crop } = region.metadata;
@@ -2507,6 +2621,7 @@ Constraints:
       exportPack.textContent = "Zipping...";
 
       try {
+        await refreshSelectedRegionExport();
         zip.file(sourceFile, await fetchSourceBlob(scene));
 
         const manifestRegions = savedRegions.map((region) => {
@@ -2643,6 +2758,7 @@ Constraints:
         points: [point]
       };
       scribbleStrokes.push(currentStroke);
+      syncSelectedRegionFromActive({ refresh: false });
       drawCanvas.setPointerCapture(event.pointerId);
       renderOutline();
     });
@@ -2661,15 +2777,18 @@ Constraints:
       }
 
       currentStroke.points.push(point);
+      syncSelectedRegionFromActive({ refresh: false });
       renderOutline();
     });
 
     drawCanvas.addEventListener("pointerup", () => {
       currentStroke = undefined;
+      syncSelectedRegionFromActive();
     });
 
     drawCanvas.addEventListener("pointercancel", () => {
       currentStroke = undefined;
+      syncSelectedRegionFromActive();
     });
 
     drawToggle.addEventListener("click", () => setTool("outline"));
