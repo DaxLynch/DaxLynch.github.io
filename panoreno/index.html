@@ -1893,7 +1893,7 @@ Constraints:
       exportPack.disabled = savedRegions.length === 0;
       updateGenerateButton();
       scribbleToggle.disabled = !hasClosedOutline;
-      drawToggle.disabled = hasDraftOutline || isSavedRegionActive || activeTool === "scribble";
+      drawToggle.disabled = hasDraftOutline || activeTool === "scribble";
       drawToggle.dataset.active = String(activeTool === "outline");
       scribbleToggle.dataset.active = String(activeTool === "scribble");
       drawToggle.textContent = activeTool === "outline" ? "Drawing..." : "Draw Outline";
@@ -2335,11 +2335,16 @@ Constraints:
     }
 
     function setTool(nextTool) {
-      activeTool = activeTool === nextTool ? "none" : nextTool;
-
-      if (activeTool === "outline") {
+      if (activeTool === nextTool) {
+        activeTool = "none";
+      } else if (nextTool === "outline") {
+        syncSelectedRegionFromActive({ refresh: false });
+        resetDraftOutline();
         selectedRegionId = undefined;
         regionPrompt.value = "";
+        activeTool = "outline";
+      } else {
+        activeTool = nextTool;
       }
 
       syncViewerInteraction();
