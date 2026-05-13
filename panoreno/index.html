@@ -60,6 +60,13 @@
       pointer-events: none;
     }
 
+    .viewer-controls {
+      display: grid;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    .room-switcher,
     .image-switcher {
       display: flex;
       gap: 4px;
@@ -71,6 +78,7 @@
       pointer-events: auto;
     }
 
+    .room-switcher button,
     .image-switcher button {
       min-width: 96px;
       height: 34px;
@@ -83,6 +91,7 @@
       cursor: pointer;
     }
 
+    .room-switcher button[aria-pressed="true"],
     .image-switcher button[aria-pressed="true"] {
       color: #111;
       background: #f4f1e8;
@@ -334,7 +343,8 @@
     }
 
     .review-panel,
-    .model-input-panel {
+    .model-input-panel,
+    .fov-panel {
       position: fixed;
       right: 16px;
       bottom: 18px;
@@ -352,10 +362,44 @@
     }
 
     .review-panel h2,
-    .model-input-panel h2 {
+    .model-input-panel h2,
+    .fov-panel h2 {
       margin: 0 0 10px;
       font-size: 0.92rem;
       letter-spacing: 0;
+    }
+
+    .fov-control {
+      display: grid;
+      grid-template-columns: 104px 1fr 48px;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      color: rgb(255 255 255 / 72%);
+      font-size: 0.78rem;
+    }
+
+    .fov-control input {
+      width: 100%;
+      accent-color: #f4f1e8;
+    }
+
+    .fov-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .fov-actions button {
+      min-height: 34px;
+      border: 1px solid rgb(255 255 255 / 20%);
+      border-radius: 6px;
+      padding: 0 12px;
+      color: white;
+      background: rgb(255 255 255 / 10%);
+      font: inherit;
+      font-size: 0.84rem;
+      cursor: pointer;
     }
 
     .review-frame {
@@ -443,10 +487,12 @@
     }
 
     @media (max-width: 680px) {
+      .room-switcher,
       .image-switcher {
         width: calc(100vw - 40px);
       }
 
+      .room-switcher button,
       .image-switcher button {
         flex: 1;
         min-width: 0;
@@ -471,10 +517,15 @@
       }
 
       .review-panel,
-      .model-input-panel {
+      .model-input-panel,
+      .fov-panel {
         left: 12px;
         right: 12px;
         width: auto;
+      }
+
+      .fov-control {
+        grid-template-columns: 78px 1fr 44px;
       }
     }
   </style>
@@ -484,10 +535,17 @@
   <canvas id="draw-layer" aria-label="Outline drawing layer"></canvas>
 
   <header class="viewer-header">
-    <nav class="image-switcher" aria-label="Panorama image">
-      <button type="button" data-panorama="original" aria-pressed="false">Original</button>
-      <button type="button" data-panorama="remodeled" aria-pressed="true">Remodeled</button>
-    </nav>
+    <div class="viewer-controls">
+      <nav class="room-switcher" aria-label="Room">
+        <button type="button" data-room="bathroom" aria-pressed="true">Bathroom</button>
+        <button type="button" data-room="living-room" aria-pressed="false">Living Room</button>
+      </nav>
+
+      <nav class="image-switcher" aria-label="Panorama image">
+        <button type="button" data-variant="original" aria-pressed="false">Original</button>
+        <button type="button" data-variant="remodeled" aria-pressed="true">Remodeled</button>
+      </nav>
+    </div>
   </header>
 
   <aside class="generation-panel" aria-label="Generation and version controls">
@@ -511,11 +569,12 @@
       <div class="annotation-actions">
         <button type="button" id="draw-toggle">Draw Outline</button>
         <button type="button" id="scribble-toggle" disabled>Draw Scribble</button>
-        <button type="button" id="close-outline" disabled>Close</button>
-        <button type="button" id="clear-outline" disabled>Clear</button>
+        <button type="button" id="close-outline" hidden disabled>Close</button>
+        <button type="button" id="clear-outline" disabled>Delete Region</button>
         <button type="button" id="export-crop" disabled>Export PNG</button>
-        <button type="button" id="save-region" disabled>Save Region</button>
+        <button type="button" id="save-region" hidden disabled>Save Region</button>
         <button type="button" id="model-input-toggle">Model Input</button>
+        <button type="button" id="fov-toggle">Image look wonky?</button>
         <button type="button" id="export-pack" disabled>Export Pack</button>
         <a class="export-link" id="download-crop" aria-disabled="true">Download Crop</a>
         <a class="export-link" id="download-scribble" aria-disabled="true">Download Scribbles</a>
@@ -587,6 +646,33 @@
     <pre class="model-input-output" id="model-input-output"></pre>
   </aside>
 
+  <aside class="fov-panel" id="fov-panel" aria-label="Image geometry controls" hidden>
+    <h2>Image Geometry</h2>
+
+    <label class="fov-control" for="radial-fov">
+      Radial
+      <input id="radial-fov" type="range" min="180" max="360" value="290" step="1">
+      <output id="radial-fov-value" for="radial-fov">290 deg</output>
+    </label>
+
+    <label class="fov-control" for="top-fov">
+      Top
+      <input id="top-fov" type="range" min="-20" max="90" value="42" step="1">
+      <output id="top-fov-value" for="top-fov">42 deg</output>
+    </label>
+
+    <label class="fov-control" for="bottom-fov">
+      Bottom
+      <input id="bottom-fov" type="range" min="-90" max="20" value="-53" step="1">
+      <output id="bottom-fov-value" for="bottom-fov">-53 deg</output>
+    </label>
+
+    <div class="fov-actions">
+      <button type="button" id="fov-reset">Reset</button>
+      <button type="button" id="fov-close">Done</button>
+    </div>
+  </aside>
+
   <script>
     const baseSceneSettings = {
       haov: 290,
@@ -599,13 +685,44 @@
     const panoramas = {
       original: {
         label: "Original",
+        room: "bathroom",
+        variant: "original",
         src: "assets/original.jpeg",
         ...baseSceneSettings
       },
       remodeled: {
         label: "Remodeled",
+        room: "bathroom",
+        variant: "remodeled",
         src: "assets/remodeled.png",
         ...baseSceneSettings
+      },
+      "living-original": {
+        label: "Living Room Original",
+        room: "living-room",
+        variant: "original",
+        src: "assets/img-6046.jpg",
+        ...baseSceneSettings
+      },
+      "living-remodeled": {
+        label: "Living Room Remodeled",
+        room: "living-room",
+        variant: "remodeled",
+        src: "assets/latest-download.png",
+        ...baseSceneSettings
+      }
+    };
+
+    const roomPanoramas = {
+      bathroom: {
+        label: "Bathroom",
+        original: "original",
+        remodeled: "remodeled"
+      },
+      "living-room": {
+        label: "Living Room",
+        original: "living-original",
+        remodeled: "living-remodeled"
       }
     };
 
@@ -623,11 +740,27 @@
         label: "Remodeled",
         kind: "base",
         createdAt: Date.now()
+      },
+      {
+        id: "living-original",
+        parentId: null,
+        label: "Living Room Original",
+        kind: "base",
+        createdAt: Date.now()
+      },
+      {
+        id: "living-remodeled",
+        parentId: "living-original",
+        label: "Living Room Remodeled",
+        kind: "base",
+        createdAt: Date.now()
       }
     ];
 
     let viewer;
     let currentPanorama = "remodeled";
+    let currentRoom = "bathroom";
+    let currentVariant = "remodeled";
     let uploadedVersionNumber = 1;
     let generatedVersionNumber = 1;
     let activeTool = "none";
@@ -643,6 +776,8 @@
     let scribbleObjectUrl;
     let packObjectUrl;
     let isGenerating = false;
+    let selectedRegionId;
+    let fovReloadTimer;
 
     const drawCanvas = document.querySelector("#draw-layer");
     const drawContext = drawCanvas.getContext("2d");
@@ -653,6 +788,7 @@
     const exportCrop = document.querySelector("#export-crop");
     const saveRegion = document.querySelector("#save-region");
     const modelInputToggle = document.querySelector("#model-input-toggle");
+    const fovToggle = document.querySelector("#fov-toggle");
     const exportPack = document.querySelector("#export-pack");
     const downloadCrop = document.querySelector("#download-crop");
     const downloadScribble = document.querySelector("#download-scribble");
@@ -671,6 +807,15 @@
     const reviewScribble = document.querySelector("#review-scribble");
     const modelInputPanel = document.querySelector("#model-input-panel");
     const modelInputOutput = document.querySelector("#model-input-output");
+    const fovPanel = document.querySelector("#fov-panel");
+    const radialFov = document.querySelector("#radial-fov");
+    const topFov = document.querySelector("#top-fov");
+    const bottomFov = document.querySelector("#bottom-fov");
+    const radialFovValue = document.querySelector("#radial-fov-value");
+    const topFovValue = document.querySelector("#top-fov-value");
+    const bottomFovValue = document.querySelector("#bottom-fov-value");
+    const fovReset = document.querySelector("#fov-reset");
+    const fovClose = document.querySelector("#fov-close");
     const fullOpacity = document.querySelector("#full-opacity");
     const cropOpacity = document.querySelector("#crop-opacity");
     const fullOpacityValue = document.querySelector("#full-opacity-value");
@@ -687,9 +832,59 @@
     const panelToggle = document.querySelector("#panel-toggle");
     const imageCache = {};
     const regionGuideColors = ["#FF0000", "#0000FF", "#00FF00", "#FFFF00", "#FF00FF", "#00FFFF", "#000000", "#FFFFFF"];
+    const annotationStateByPanorama = {};
+    const closeOutlineRadius = 18;
 
     function getCurrentScene() {
       return panoramas[currentPanorama];
+    }
+
+    function cloneRegion(region) {
+      return {
+        metadata: JSON.parse(JSON.stringify(region.metadata)),
+        blobs: region.blobs
+      };
+    }
+
+    function saveAnnotationState(versionId = currentPanorama, regions = savedRegions) {
+      annotationStateByPanorama[versionId] = {
+        savedRegions: regions.map(cloneRegion),
+        nextRegionNumber,
+        selectedRegionId
+      };
+    }
+
+    function restoreAnnotationState(versionId = currentPanorama) {
+      const state = annotationStateByPanorama[versionId];
+
+      points = [];
+      scribbleStrokes = [];
+      currentStroke = undefined;
+      isClosed = false;
+      activeTool = "none";
+      resetReview();
+      downloadCrop.removeAttribute("href");
+      downloadCrop.removeAttribute("download");
+      downloadCrop.setAttribute("aria-disabled", "true");
+      downloadScribble.removeAttribute("href");
+      downloadScribble.removeAttribute("download");
+      downloadScribble.setAttribute("aria-disabled", "true");
+
+      if (!state) {
+        savedRegions = [];
+        selectedRegionId = undefined;
+        nextRegionNumber = 1;
+        regionPrompt.value = "";
+        resetPackDownload();
+        return;
+      }
+
+      savedRegions = state.savedRegions.map(cloneRegion);
+      selectedRegionId = state.selectedRegionId;
+      nextRegionNumber = state.nextRegionNumber;
+
+      const selectedRegion = savedRegions.find((region) => region.metadata.id === selectedRegionId);
+      regionPrompt.value = selectedRegion ? selectedRegion.metadata.prompt || "" : "";
     }
 
     function getVersion(versionId) {
@@ -783,10 +978,13 @@
 
     function addPanoramaVersion({ label, src, parentId = currentPanorama, kind = "fork" }) {
       const id = `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const parentScene = panoramas[parentId] || getCurrentScene();
 
       panoramas[id] = {
         label,
         src,
+        room: parentScene?.room || currentRoom,
+        variant: kind === "fork" ? "generated" : "original",
         ...baseSceneSettings
       };
 
@@ -804,8 +1002,12 @@
     }
 
     function renderVersionControls() {
-      document.querySelectorAll("[data-panorama]").forEach((button) => {
-        button.setAttribute("aria-pressed", String(button.dataset.panorama === currentPanorama));
+      document.querySelectorAll("[data-room]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.room === currentRoom));
+      });
+
+      document.querySelectorAll("[data-variant]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.variant === currentVariant));
       });
 
       forkTree.innerHTML = "";
@@ -833,6 +1035,121 @@
 
     function getSignedAngleDelta(value) {
       return ((((value + 180) % 360) + 360) % 360) - 180;
+    }
+
+    function getSceneTop(scene) {
+      return (scene.vOffset || 0) + (scene.vaov / 2);
+    }
+
+    function getSceneBottom(scene) {
+      return (scene.vOffset || 0) - (scene.vaov / 2);
+    }
+
+    function getCurrentView() {
+      if (!viewer) {
+        return {
+          pitch: 0,
+          yaw: 0,
+          hfov: 100
+        };
+      }
+
+      return {
+        pitch: viewer.getPitch(),
+        yaw: viewer.getYaw(),
+        hfov: viewer.getHfov()
+      };
+    }
+
+    function mountViewer(scene, view = {}) {
+      if (viewer) {
+        viewer.destroy();
+      }
+
+      viewer = pannellum.viewer("panorama", {
+        type: "equirectangular",
+        panorama: scene.src,
+        autoLoad: true,
+        showControls: true,
+        backgroundColor: [0, 0, 0],
+        haov: scene.haov,
+        vaov: scene.vaov,
+        vOffset: scene.vOffset,
+        pitch: view.pitch ?? 0,
+        yaw: view.yaw ?? 0,
+        hfov: view.hfov ?? 100
+      });
+    }
+
+    function updateFovDisplays() {
+      radialFovValue.value = `${Math.round(Number(radialFov.value))} deg`;
+      topFovValue.value = `${Math.round(Number(topFov.value))} deg`;
+      bottomFovValue.value = `${Math.round(Number(bottomFov.value))} deg`;
+    }
+
+    function syncFovControls() {
+      const scene = getCurrentScene();
+
+      radialFov.value = Math.round(scene.haov);
+      topFov.value = Math.round(getSceneTop(scene));
+      bottomFov.value = Math.round(getSceneBottom(scene));
+      updateFovDisplays();
+    }
+
+    function applyFovControls() {
+      const scene = getCurrentScene();
+      const view = getCurrentView();
+      let top = Number(topFov.value);
+      let bottom = Number(bottomFov.value);
+
+      if (top <= bottom + 10) {
+        top = bottom + 10;
+        topFov.value = top;
+      }
+
+      scene.haov = Number(radialFov.value);
+      scene.vaov = top - bottom;
+      scene.vOffset = (top + bottom) / 2;
+      updateFovDisplays();
+      saveAnnotationState();
+      mountViewer(scene, view);
+      syncViewerInteraction();
+      renderOutline();
+      refreshOpenModelInput();
+    }
+
+    function scheduleFovApply() {
+      updateFovDisplays();
+
+      if (fovReloadTimer) {
+        window.clearTimeout(fovReloadTimer);
+      }
+
+      fovReloadTimer = window.setTimeout(() => {
+        fovReloadTimer = undefined;
+        applyFovControls();
+      }, 80);
+    }
+
+    function resetFovControls() {
+      const scene = getCurrentScene();
+
+      scene.haov = baseSceneSettings.haov;
+      scene.vaov = baseSceneSettings.vaov;
+      scene.vOffset = baseSceneSettings.vOffset;
+      syncFovControls();
+      applyFovControls();
+    }
+
+    function toggleFovPanel() {
+      const shouldShow = fovPanel.hidden;
+
+      fovPanel.hidden = !shouldShow;
+      fovToggle.dataset.active = String(shouldShow);
+
+      if (shouldShow) {
+        syncFovControls();
+      }
     }
 
     function loadSourceImage(scene) {
@@ -1201,7 +1518,7 @@ Constraints:
       }
 
       if (savedRegions.length === 0 && !isClosed) {
-        setGenerationStatus("Close an outline, or save at least one region, before generating.", true);
+        setGenerationStatus("Draw an outline and click near its starting point to create a region before generating.", true);
         updateGenerateButton();
         return;
       }
@@ -1362,19 +1679,24 @@ Constraints:
     }
 
     function updateAnnotationUi() {
+      const hasDraftOutline = points.length > 0 || activeTool === "outline";
+      const canDelete = hasDraftOutline || Boolean(selectedRegionId);
+
       pointCount.textContent = points.length;
       regionCount.textContent = savedRegions.length;
-      closeOutline.disabled = points.length < 3 || isClosed;
-      clearOutline.disabled = points.length === 0 && scribbleStrokes.length === 0;
+      closeOutline.disabled = true;
+      clearOutline.disabled = !canDelete;
       exportCrop.disabled = !isClosed;
       saveRegion.disabled = !isClosed;
       exportPack.disabled = savedRegions.length === 0;
       updateGenerateButton();
       scribbleToggle.disabled = !isClosed;
+      drawToggle.disabled = hasDraftOutline || activeTool === "scribble";
       drawToggle.dataset.active = String(activeTool === "outline");
       scribbleToggle.dataset.active = String(activeTool === "scribble");
-      drawToggle.textContent = activeTool === "outline" ? "Stop Outline" : "Draw Outline";
+      drawToggle.textContent = activeTool === "outline" ? "Drawing..." : "Draw Outline";
       scribbleToggle.textContent = activeTool === "scribble" ? "Stop Scribble" : "Draw Scribble";
+      clearOutline.textContent = hasDraftOutline ? "Cancel Outline" : "Delete Region";
 
       if (viewer) {
         viewYaw.textContent = viewer.getYaw().toFixed(1);
@@ -1415,10 +1737,291 @@ Constraints:
       });
     }
 
+    function yawPitchToScreenPoint(point) {
+      if (!viewer) {
+        return {
+          x: point.x,
+          y: point.y
+        };
+      }
+
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const yawDelta = getSignedAngleDelta(point.yaw - viewer.getYaw()) * (Math.PI / 180);
+      const pitch = point.pitch * (Math.PI / 180);
+      const viewPitch = viewer.getPitch() * (Math.PI / 180);
+      const horizontalFov = viewer.getHfov() * (Math.PI / 180);
+      const focalLength = (width / 2) / Math.tan(horizontalFov / 2);
+      const cosPitch = Math.cos(pitch);
+      const x = cosPitch * Math.sin(yawDelta);
+      const y = Math.sin(pitch);
+      const z = cosPitch * Math.cos(yawDelta);
+      const cameraY = (y * Math.cos(viewPitch)) - (z * Math.sin(viewPitch));
+      const cameraZ = (y * Math.sin(viewPitch)) + (z * Math.cos(viewPitch));
+
+      if (cameraZ <= 0.02) {
+        return undefined;
+      }
+
+      return {
+        x: (width / 2) + ((x / cameraZ) * focalLength),
+        y: (height / 2) - ((cameraY / cameraZ) * focalLength)
+      };
+    }
+
+    function getProjectedPoints(regionPoints) {
+      const projected = regionPoints.map(yawPitchToScreenPoint);
+
+      if (projected.some((point) => !point)) {
+        return [];
+      }
+
+      return projected;
+    }
+
+    function drawPolygonOverlay(screenPoints, color, fillAlpha = 0.14, lineWidth = 3) {
+      if (screenPoints.length < 3) {
+        return;
+      }
+
+      drawContext.save();
+      drawContext.lineJoin = "round";
+      drawContext.lineWidth = lineWidth;
+      drawContext.strokeStyle = color;
+      drawContext.fillStyle = color;
+      drawContext.globalAlpha = fillAlpha;
+      drawContext.beginPath();
+      drawContext.moveTo(screenPoints[0].x, screenPoints[0].y);
+      screenPoints.slice(1).forEach((point) => {
+        drawContext.lineTo(point.x, point.y);
+      });
+      drawContext.closePath();
+      drawContext.fill();
+      drawContext.globalAlpha = 1;
+      drawContext.stroke();
+      drawContext.restore();
+    }
+
+    function screenPointIsInsidePolygon(point, polygon) {
+      if (polygon.length < 3) {
+        return false;
+      }
+
+      let inside = false;
+
+      for (let index = 0, previousIndex = polygon.length - 1; index < polygon.length; previousIndex = index++) {
+        const current = polygon[index];
+        const previous = polygon[previousIndex];
+        const intersects = ((current.y > point.y) !== (previous.y > point.y))
+          && (point.x < ((previous.x - current.x) * (point.y - current.y)) / (previous.y - current.y) + current.x);
+
+        if (intersects) {
+          inside = !inside;
+        }
+      }
+
+      return inside;
+    }
+
+    function renderProjectedScribbles(strokes, lineWidth = 6) {
+      strokes.forEach((stroke) => {
+        drawContext.save();
+        drawContext.lineCap = "round";
+        drawContext.lineJoin = "round";
+        drawContext.lineWidth = lineWidth;
+        drawContext.strokeStyle = stroke.color;
+        drawContext.beginPath();
+
+        let isDrawingSegment = false;
+
+        stroke.points.forEach((point) => {
+          const screenPoint = yawPitchToScreenPoint(point);
+
+          if (!screenPoint) {
+            isDrawingSegment = false;
+            return;
+          }
+
+          if (!isDrawingSegment) {
+            drawContext.moveTo(screenPoint.x, screenPoint.y);
+            isDrawingSegment = true;
+            return;
+          }
+
+          drawContext.lineTo(screenPoint.x, screenPoint.y);
+        });
+
+        drawContext.stroke();
+        drawContext.restore();
+      });
+    }
+
+    function renderSavedRegions() {
+      savedRegions.forEach((region, index) => {
+        const color = regionGuideColors[index % regionGuideColors.length];
+        const screenPoints = getProjectedPoints(region.metadata.polygon);
+        const isSelected = region.metadata.id === selectedRegionId;
+
+        drawPolygonOverlay(screenPoints, isSelected ? "#FFFFFF" : color, isSelected ? 0.22 : 0.14, isSelected ? 5 : 3);
+        renderProjectedScribbles(region.metadata.scribbles, isSelected ? 7 : 5);
+      });
+    }
+
+    function getActiveScreenPoints() {
+      return getProjectedPoints(points);
+    }
+
+    function getRegionAtScreenPoint(point) {
+      for (let index = savedRegions.length - 1; index >= 0; index -= 1) {
+        const region = savedRegions[index];
+        const screenPoints = getProjectedPoints(region.metadata.polygon);
+
+        if (screenPointIsInsidePolygon(point, screenPoints)) {
+          return region;
+        }
+      }
+
+      return undefined;
+    }
+
+    function refreshOpenModelInput() {
+      if (modelInputPanel.hidden) {
+        return;
+      }
+
+      getModelInputText()
+        .then((text) => {
+          modelInputOutput.textContent = text;
+        })
+        .catch((error) => {
+          modelInputOutput.textContent = error.message;
+        });
+    }
+
+    function selectSavedRegion(region) {
+      selectedRegionId = region.metadata.id;
+      regionPrompt.value = region.metadata.prompt || "";
+      activeTool = "none";
+      syncViewerInteraction();
+      setGenerationStatus(`Selected ${region.metadata.id}. Edit the region prompt below.`);
+      saveAnnotationState();
+      renderOutline();
+      refreshOpenModelInput();
+    }
+
+    function updateSelectedRegionPrompt() {
+      if (!selectedRegionId) {
+        return;
+      }
+
+      const selectedRegion = savedRegions.find((region) => region.metadata.id === selectedRegionId);
+
+      if (!selectedRegion) {
+        selectedRegionId = undefined;
+        return;
+      }
+
+      selectedRegion.metadata.prompt = regionPrompt.value.trim();
+      resetPackDownload();
+      saveAnnotationState();
+      renderOutline();
+      refreshOpenModelInput();
+    }
+
+    function isNearOutlineStart(point) {
+      if (points.length < 3) {
+        return false;
+      }
+
+      const startPoint = yawPitchToScreenPoint(points[0]);
+
+      if (!startPoint) {
+        return false;
+      }
+
+      return Math.hypot(point.x - startPoint.x, point.y - startPoint.y) <= closeOutlineRadius;
+    }
+
+    function resetDraftOutline() {
+      points = [];
+      scribbleStrokes = [];
+      currentStroke = undefined;
+      isClosed = false;
+      activeTool = "none";
+      resetReview();
+      downloadCrop.removeAttribute("href");
+      downloadCrop.removeAttribute("download");
+      downloadCrop.setAttribute("aria-disabled", "true");
+      downloadScribble.removeAttribute("href");
+      downloadScribble.removeAttribute("download");
+      downloadScribble.setAttribute("aria-disabled", "true");
+    }
+
+    async function commitCurrentOutline() {
+      if (points.length < 3) {
+        return;
+      }
+
+      isClosed = true;
+      activeTool = "none";
+      syncViewerInteraction();
+      renderOutline();
+
+      const regionId = `region-${String(nextRegionNumber).padStart(3, "0")}`;
+
+      try {
+        const region = await buildCurrentRegionExport(regionId);
+        savedRegions.push(region);
+        nextRegionNumber += 1;
+        resetPackDownload();
+        resetDraftOutline();
+        selectSavedRegion(region);
+        setGenerationStatus(`Created ${region.metadata.id}. Add or edit its prompt below.`);
+      } catch (error) {
+        cropOutput.textContent = error.message;
+        reviewPanel.hidden = false;
+      } finally {
+        updateAnnotationUi();
+      }
+    }
+
+    function deleteSelectedRegionOrDraft() {
+      if (points.length > 0 || activeTool === "outline") {
+        resetDraftOutline();
+        syncViewerInteraction();
+        renderOutline();
+        updateAnnotationUi();
+        return;
+      }
+
+      if (!selectedRegionId) {
+        return;
+      }
+
+      const deletedRegionId = selectedRegionId;
+      savedRegions = savedRegions.filter((region) => region.metadata.id !== selectedRegionId);
+      selectedRegionId = undefined;
+      regionPrompt.value = "";
+      resetPackDownload();
+      saveAnnotationState();
+      renderOutline();
+      refreshOpenModelInput();
+      updateAnnotationUi();
+      setGenerationStatus(`Deleted ${deletedRegionId}.`);
+    }
+
     function renderOutline() {
       drawContext.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      renderSavedRegions();
 
       if (points.length === 0) {
+        updateAnnotationUi();
+        return;
+      }
+
+      const activeScreenPoints = getActiveScreenPoints();
+
+      if (activeScreenPoints.length === 0) {
         updateAnnotationUi();
         return;
       }
@@ -1427,9 +2030,9 @@ Constraints:
       drawContext.strokeStyle = "#f4f1e8";
       drawContext.fillStyle = "rgb(244 241 232 / 18%)";
       drawContext.beginPath();
-      drawContext.moveTo(points[0].x, points[0].y);
+      drawContext.moveTo(activeScreenPoints[0].x, activeScreenPoints[0].y);
 
-      points.slice(1).forEach((point) => {
+      activeScreenPoints.slice(1).forEach((point) => {
         drawContext.lineTo(point.x, point.y);
       });
 
@@ -1440,15 +2043,17 @@ Constraints:
 
       drawContext.stroke();
 
-      renderScribbles(drawContext, scribbleStrokes);
+      renderProjectedScribbles(scribbleStrokes);
 
-      points.forEach((point) => {
+      activeScreenPoints.forEach((point, index) => {
+        const canCloseFromStart = index === 0 && activeTool === "outline" && points.length >= 3;
+
         drawContext.beginPath();
-        drawContext.arc(point.x, point.y, 5, 0, Math.PI * 2);
-        drawContext.fillStyle = "#f4f1e8";
+        drawContext.arc(point.x, point.y, canCloseFromStart ? closeOutlineRadius : 5, 0, Math.PI * 2);
+        drawContext.fillStyle = canCloseFromStart ? "rgb(244 241 232 / 18%)" : "#f4f1e8";
         drawContext.fill();
-        drawContext.strokeStyle = "#111";
-        drawContext.lineWidth = 1.5;
+        drawContext.strokeStyle = canCloseFromStart ? "#f4f1e8" : "#111";
+        drawContext.lineWidth = canCloseFromStart ? 3 : 1.5;
         drawContext.stroke();
       });
 
@@ -1461,6 +2066,7 @@ Constraints:
       currentStroke = undefined;
       isClosed = false;
       activeTool = "none";
+      selectedRegionId = undefined;
       resetReview();
       regionPrompt.value = "";
       downloadCrop.removeAttribute("href");
@@ -1492,7 +2098,14 @@ Constraints:
 
     function setTool(nextTool) {
       activeTool = activeTool === nextTool ? "none" : nextTool;
+
+      if (activeTool === "outline") {
+        selectedRegionId = undefined;
+        regionPrompt.value = "";
+      }
+
       syncViewerInteraction();
+      renderOutline();
       updateAnnotationUi();
     }
 
@@ -1517,20 +2130,13 @@ Constraints:
         return false;
       }
 
-      let inside = false;
+      const outlinePoints = getActiveScreenPoints();
 
-      for (let index = 0, previousIndex = points.length - 1; index < points.length; previousIndex = index++) {
-        const current = points[index];
-        const previous = points[previousIndex];
-        const intersects = ((current.y > point.y) !== (previous.y > point.y))
-          && (point.x < ((previous.x - current.x) * (point.y - current.y)) / (previous.y - current.y) + current.x);
-
-        if (intersects) {
-          inside = !inside;
-        }
+      if (outlinePoints.length < 3) {
+        return false;
       }
 
-      return inside;
+      return screenPointIsInsidePolygon(point, outlinePoints);
     }
 
     function traceSourcePolygon(context, sourcePoints, box) {
@@ -1731,6 +2337,7 @@ Constraints:
         nextRegionNumber += 1;
         resetPackDownload();
         clearAnnotation();
+        selectSavedRegion(region);
       } catch (error) {
         cropOutput.textContent = error.message;
         reviewPanel.hidden = false;
@@ -1820,41 +2427,56 @@ Constraints:
         return;
       }
 
-      currentPanorama = key;
-
       if (viewer) {
-        viewer.destroy();
+        saveAnnotationState();
       }
 
-      viewer = pannellum.viewer("panorama", {
-        type: "equirectangular",
-        panorama: scene.src,
-        autoLoad: true,
-        showControls: true,
-        backgroundColor: [0, 0, 0],
-        haov: scene.haov,
-        vaov: scene.vaov,
-        vOffset: scene.vOffset,
-        pitch: 0,
-        yaw: 0,
-        hfov: 100
-      });
+      currentPanorama = key;
+      currentRoom = scene.room || currentRoom;
+      currentVariant = scene.variant === "generated" ? currentVariant : (scene.variant || currentVariant);
 
-      clearAnnotation({ clearSaved: true });
+      mountViewer(scene);
+
+      restoreAnnotationState(key);
       activeTool = "none";
       syncViewerInteraction();
       renderVersionControls();
+      syncFovControls();
+      renderOutline();
       updateAnnotationUi();
     }
 
-    document.querySelectorAll("[data-panorama]").forEach((button) => {
-      button.addEventListener("click", () => loadPanorama(button.dataset.panorama));
+    document.querySelectorAll("[data-room]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const nextRoom = button.dataset.room;
+        const nextPanorama = roomPanoramas[nextRoom][currentVariant] || roomPanoramas[nextRoom].remodeled;
+
+        loadPanorama(nextPanorama);
+      });
+    });
+
+    document.querySelectorAll("[data-variant]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const nextVariant = button.dataset.variant;
+        const nextPanorama = roomPanoramas[currentRoom]?.[nextVariant];
+
+        if (nextPanorama) {
+          loadPanorama(nextPanorama);
+        }
+      });
     });
 
     drawCanvas.addEventListener("pointerdown", (event) => {
       if (activeTool === "outline" && !isClosed) {
         event.preventDefault();
-        points.push(getCanvasPoint(event));
+        const point = getCanvasPoint(event);
+
+        if (isNearOutlineStart(point)) {
+          commitCurrentOutline();
+          return;
+        }
+
+        points.push(point);
         renderOutline();
         return;
       }
@@ -1906,17 +2528,11 @@ Constraints:
 
     drawToggle.addEventListener("click", () => setTool("outline"));
     scribbleToggle.addEventListener("click", () => setTool("scribble"));
-    closeOutline.addEventListener("click", () => {
-      isClosed = points.length >= 3;
-      activeTool = "none";
-      syncViewerInteraction();
-      renderOutline();
-    });
-    clearOutline.addEventListener("click", () => clearAnnotation());
     exportCrop.addEventListener("click", exportOutlinedCrop);
-    saveRegion.addEventListener("click", saveCurrentRegion);
     modelInputToggle.addEventListener("click", toggleModelInputPanel);
+    fovToggle.addEventListener("click", toggleFovPanel);
     exportPack.addEventListener("click", exportRegionPack);
+    regionPrompt.addEventListener("input", updateSelectedRegionPrompt);
     uploadPanorama.addEventListener("change", handlePanoramaUpload);
     apiKeyInput.addEventListener("input", updateGenerateButton);
     generateEdit.addEventListener("click", generateCurrentEdit);
@@ -1925,6 +2541,11 @@ Constraints:
     });
     fullOpacity.addEventListener("input", setOpacityDisplays);
     cropOpacity.addEventListener("input", setOpacityDisplays);
+    radialFov.addEventListener("input", scheduleFovApply);
+    topFov.addEventListener("input", scheduleFovApply);
+    bottomFov.addEventListener("input", scheduleFovApply);
+    fovReset.addEventListener("click", resetFovControls);
+    fovClose.addEventListener("click", toggleFovPanel);
     downloadCrop.addEventListener("click", (event) => {
       if (!downloadCrop.href) {
         event.preventDefault();
@@ -1940,6 +2561,24 @@ Constraints:
         event.preventDefault();
       }
     });
+    document.addEventListener("click", (event) => {
+      if (activeTool !== "none" || event.target.closest("aside, header, .pnlm-controls-container")) {
+        return;
+      }
+
+      const selectedRegion = getRegionAtScreenPoint({
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (!selectedRegion) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      selectSavedRegion(selectedRegion);
+    }, true);
     colorButtons.forEach((button) => {
       button.addEventListener("click", () => {
         activeColor = button.dataset.color;
@@ -1949,14 +2588,21 @@ Constraints:
         });
       });
     });
+    clearOutline.addEventListener("click", deleteSelectedRegionOrDraft);
     window.addEventListener("resize", resizeDrawCanvas);
     window.setInterval(updateAnnotationUi, 300);
+
+    function renderOverlayFrame() {
+      renderOutline();
+      window.requestAnimationFrame(renderOverlayFrame);
+    }
 
     setOpacityDisplays();
     configureGenerationMode();
     setAnnotationCollapsed(false);
     resizeDrawCanvas();
     loadPanorama("remodeled");
+    window.requestAnimationFrame(renderOverlayFrame);
   </script>
 </body>
 </html>
